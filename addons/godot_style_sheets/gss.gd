@@ -1,4 +1,3 @@
-class_name GSS
 extends Node
 
 ## Used to indicate that a GSS property is not a Theme.DATA_TYPE_* property and is most likely a
@@ -41,8 +40,14 @@ const REGEX_THEME_OVERRIDE: String = r"theme_override_([a-z_]+)/([a-z_]+)"
 ## "Vector2(5, 20)"; or "-20" and "100" from "Vector2(-20, 100)".
 const REGEX_VECTOR2: String = r"Vector2?i?\s*\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)"
 
+## Icon file paths that have been loaded. 
+var icons: Array[String] = []
+
+## Font file paths that have been loaded.
+var fonts: Array[String] = []
+
 ## Dictionary of RegEx objects used to match patterns.
-static var regex: Dictionary = {
+var regex: Dictionary = {
 	"color_constant": RegEx.create_from_string(REGEX_COLOR_CONSTANT),
 	"color_hex": RegEx.create_from_string(REGEX_COLOR_HEX),
 	"color_rgba": RegEx.create_from_string(REGEX_COLOR_RGBA),
@@ -54,7 +59,7 @@ static var regex: Dictionary = {
 }
 
 ## Dictionary of `theme_override_*` keys and their corresponding Theme.DATA_TYPE_* integer values.
-static var theme_property_types: Dictionary = {
+var theme_property_types: Dictionary = {
 	"colors": Theme.DATA_TYPE_COLOR,
 	"constants": Theme.DATA_TYPE_CONSTANT,
 	"fonts": Theme.DATA_TYPE_FONT,
@@ -65,7 +70,7 @@ static var theme_property_types: Dictionary = {
 
 
 ## Converts a GSS Dictionary into a Theme object.
-static func dict_to_theme(dict: Dictionary) -> Theme:
+func dict_to_theme(dict: Dictionary) -> Theme:
 	var theme := Theme.new()
 	
 	# Loop through each key in the GSS dictionary.
@@ -102,28 +107,51 @@ static func dict_to_theme(dict: Dictionary) -> Theme:
 
 
 ## Converts the contents of a GSS file to a GSS Dictionary that can be parsed into a Theme.
-static func file_to_dict(path: String) -> Dictionary:
-	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+func file_to_dict(source_path: String) -> Dictionary:
+	var file: FileAccess = FileAccess.open(source_path, FileAccess.READ)
 	
-	return text_to_dict(file.get_as_text())
+	if !file:
+		push_error("[GSS] Unable to read file: %s" % source_path)
+		return {}
+	
+	var text: String = file.get_as_text()
+	
+	return text_to_dict(text)
 
 
 ## Converts the contents of a GSS file to a Theme object.
-static func file_to_theme(path: String) -> Theme:
-	return dict_to_theme(file_to_dict(path))
+func file_to_theme(source_path: String) -> Theme:
+	return dict_to_theme(file_to_dict(source_path))
 
 
-## Converts the contents of a GSS file to a Theme object and saves it to a resource file, returning
-## the output path.
-static func file_to_tres(path: String, output_path: String = "") -> String:
-	if !output_path:
-		output_path = "%s.tres" % path.trim_suffix(".txt")
+## Converts the contents of a GSS file to a Theme object and saves it to a resource file.
+func file_to_tres(
+	source_path: String,
+	save_path: String = "",
+	save_extension: String = "tres"
+) -> int:
+	var file: FileAccess = FileAccess.open(source_path, FileAccess.READ)
 	
-	return theme_to_tres(file_to_theme(path), output_path)
+	if !file:
+		push_error("[GSS] Unable to read file: %s" % source_path)
+		return ERR_FILE_CANT_READ
+	
+	if !save_path:
+		# Remove the ".gss" file extension from the source path.
+		save_path = source_path.trim_suffix(".gss")
+	else:
+		# Remove the file extension from the save path, if it exists.
+		save_path = save_path.trim_suffix(save_extension)
+	
+	var text: String = file.get_as_text()
+	var dict: Dictionary = text_to_dict(text)
+	var theme: Theme = dict_to_theme(dict)
+	
+	return ResourceSaver.save(theme, "%s.%s" % [save_path, save_extension])
 
 
 ## Converts GSS text (i.e. from a GSS file) into a GSS Dictionary that can be parsed into a Theme.
-static func text_to_dict(raw_text: String) -> Dictionary:
+func text_to_dict(raw_text: String) -> Dictionary:
 	var text: String = _strip_comments(raw_text)
 	var lines: PackedStringArray = text.split("\n")
 	var result: Dictionary = {}
@@ -145,15 +173,13 @@ static func text_to_dict(raw_text: String) -> Dictionary:
 	return result
 
 
-## Saves a Theme object to a resource file at the given output path, returning the output path.
-static func theme_to_tres(theme: Theme, output_path: String) -> String:
-	ResourceSaver.save(theme, output_path)
-	
-	return output_path
+## Saves a Theme object to a resource file, returning OK or ERR_FILE_CANT_WRITE.
+func theme_to_tres(theme: Theme, save_path: String) -> int:
+	return ResourceSaver.save(theme, save_path)
 
 
 ## Returns a dictionary of property names and their corresponding data types for the given class.
-static func _get_class_property_types(cls: Variant, no_inheritance: bool = false) -> Dictionary:
+func _get_class_property_types(cls: Variant, no_inheritance: bool = false) -> Dictionary:
 	var result: Dictionary = {}
 	
 	if !ClassDB.class_exists(cls):
@@ -171,7 +197,7 @@ static func _get_class_property_types(cls: Variant, no_inheritance: bool = false
 
 
 ## Returns an array of all class names that have theme properties.
-static func _get_classes_with_theme_properties() -> Array:
+func _get_classes_with_theme_properties() -> Array:
 	var classes_with_theme: Array = []
 	var all_classes: PackedStringArray = ClassDB.get_class_list()
 	
@@ -186,12 +212,12 @@ static func _get_classes_with_theme_properties() -> Array:
 ## the given `props` dictionary contained the Button theme properties, and "border_width" was
 ## the given `key` parameter, this function would return:
 ## ["border_width_bottom", "border_width_left", "border_width_right", "border_width_top"]
-static func _get_property_group(props: Dictionary, key: String) -> Array:
+func _get_property_group(props: Dictionary, key: String) -> Array:
 	return props.keys().filter(func(k): return k != key and k.begins_with(key))
 
 
 ## Returns a dictionary of property names and their corresponding data types for the given StyleBox class.
-static func _get_stylebox_property_types(cls: String) -> Dictionary:
+func _get_stylebox_property_types(cls: String) -> Dictionary:
 	var no_inheritance: bool = true
 	var result: Dictionary = _get_class_property_types(cls, no_inheritance)
 	
@@ -202,7 +228,7 @@ static func _get_stylebox_property_types(cls: String) -> Dictionary:
 
 
 ## Returns the number of tab characters at the beginning of a string.
-static func _get_indentation_level(text: String) -> int:
+func _get_indentation_level(text: String) -> int:
 	var level: float = 0.0
 	
 	for char in text:
@@ -220,7 +246,7 @@ static func _get_indentation_level(text: String) -> int:
 
 
 ## Returns a dictionary of `theme_override_*` property names and their corresponding data types.
-static func _get_theme_property_types(theme_type: String) -> Dictionary:
+func _get_theme_property_types(theme_type: String) -> Dictionary:
 	var result: Dictionary = {}
 	
 	if !ClassDB.class_exists(theme_type):
@@ -251,7 +277,7 @@ static func _get_theme_property_types(theme_type: String) -> Dictionary:
 
 
 ## Returns `true` if the given class has a `theme` property.
-static func _has_theme_properties(_class_name: String) -> bool:
+func _has_theme_properties(_class_name: String) -> bool:
 	var properties: Array[Dictionary] = ClassDB.class_get_property_list(_class_name)
 	
 	for property: Dictionary in properties:
@@ -262,12 +288,12 @@ static func _has_theme_properties(_class_name: String) -> bool:
 
 
 ## Returns `true` if the given style is a valid StyleBox property.
-static func _is_valid_style(style: String, theme_props: Dictionary) -> bool:
+func _is_valid_style(style: String, theme_props: Dictionary) -> bool:
 	return style in theme_props.keys() and Theme.DATA_TYPE_STYLEBOX == theme_props[style]
 
 
 ## Parses a boolean value from a string.
-static func _parse_bool(text: String) -> bool:
+func _parse_bool(text: String) -> bool:
 	if !text:
 		return false
 	
@@ -280,7 +306,7 @@ static func _parse_bool(text: String) -> bool:
 
 
 ## Parses a Color value from a string.
-static func _parse_color(text: String) -> Color:
+func _parse_color(text: String) -> Color:
 	var _match: RegExMatch
 	
 	# Handle RGB/RGBA values like "Color(0.2, 1.0, 0.7)" and "Color(0.2, 1.0, 0.7, 0.8)".
@@ -315,22 +341,27 @@ static func _parse_color(text: String) -> Color:
 
 
 ## Parses a theme constant value (i.e. an integer) from a string.
-static func _parse_constant(value: String) -> int:
+func _parse_constant(value: String) -> int:
 	return value as int
 
 
 ## Parses a Font value from a string by loading the font resource from the given path.
-static func _parse_font(value: String) -> Font:
-	return load(value)
+func _parse_font(value: String) -> Font:
+	var font: Font = load(value)
+	
+	if not value in fonts:
+		fonts.append(value)
+	
+	return font
 
 
 ## Parses a font size value (i.e. an integer) from a string.
-static func _parse_font_size(value: String) -> int:
+func _parse_font_size(value: String) -> int:
 	return value as int
 
 
 ## Parses a GSS property and adds it to the given GSS Dictionary.
-static func _parse_gss_property(
+func _parse_gss_property(
 	text: String,
 	dict: Dictionary,
 	theme_type: String,
@@ -365,12 +396,17 @@ static func _parse_gss_property(
 
 
 ## Parses an icon value from a string by loading the icon resource from the given path.
-static func _parse_icon(value: String) -> Texture2D:
-	return load(value)
+func _parse_icon(value: String) -> Texture2D:
+	var icon: Texture2D = load(value)
+	
+	if not value in icons:
+		icons.append(value)
+	
+	return icon
 
 
 ## Parses a StyleBox property value from a string, based on the property type.
-static func _parse_stylebox_property(prop: String, text: String, stylebox_props: Dictionary) -> Variant:
+func _parse_stylebox_property(prop: String, text: String, stylebox_props: Dictionary) -> Variant:
 	if !stylebox_props.has(prop):
 		push_warning("[GSS] Invalid StyleBox property: %s" % prop)
 		return text
@@ -388,7 +424,7 @@ static func _parse_stylebox_property(prop: String, text: String, stylebox_props:
 
 
 ## Parses a Vector2 value from a string.
-static func _parse_vector2(text: String) -> Vector2:
+func _parse_vector2(text: String) -> Vector2:
 	var _match: RegExMatch = regex.vector2.search(text)
 	
 	if !_match:
@@ -405,7 +441,7 @@ static func _parse_vector2(text: String) -> Vector2:
 ## it may be a group property (e.g. "border_width", "corner_radius") that has multiple properties (e.g.
 ## "border_width_top", "border_width_bottom"). If so, this function will call itself recursively for each
 ## of the properties prefixed with the group property name.
-static func _set_stylebox_property(
+func _set_stylebox_property(
 	stylebox: StyleBox,
 	stylebox_props: Dictionary,
 	prop: String,
@@ -420,7 +456,7 @@ static func _set_stylebox_property(
 
 
 ## Sets a property on the given Theme, based on the property type.
-static func _set_theme_property(
+func _set_theme_property(
 	theme: Theme,
 	data_type: int,
 	prop: String,
@@ -436,5 +472,5 @@ static func _set_theme_property(
 
 
 ## Strips comments from the given text.
-static func _strip_comments(text: String) -> String:
+func _strip_comments(text: String) -> String:
 	return regex.comment.sub(text, '', true)

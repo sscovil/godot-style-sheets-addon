@@ -17,6 +17,10 @@ boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/show_image=false
 config/icon="res://icon.svg"
 
+[autoload]
+
+GSS="*res://addons/godot_style_sheets/gss.gd"
+
 [debug]
 
 gdscript/warnings/unused_parameter=0

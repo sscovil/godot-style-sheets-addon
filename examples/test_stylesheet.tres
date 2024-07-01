@@ -1,11 +1,11 @@
 [gd_resource type="Theme" load_steps=5 format=3]
 
-[ext_resource type="FontFile" path="res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf" id="1_qaufo"]
+[ext_resource type="FontFile" path="res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf" id="1_d3cog"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bctqh"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wtplb"]
 bg_color = Color(1, 0.133333, 0.8, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l5vh5"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sotpv"]
 bg_color = Color(1, 0, 0, 1)
 corner_radius_top_left = 20
 corner_radius_top_right = 20
@@ -16,12 +16,12 @@ expand_margin_top = 20.0
 expand_margin_right = 20.0
 expand_margin_bottom = 20.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nnvkx"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ap76s"]
 bg_color = Color(0, 0, 1, 1)
 
 [resource]
 Button/font_sizes/font_size = 20
-Button/fonts/font = ExtResource("1_qaufo")
-Button/styles/disabled = SubResource("StyleBoxFlat_bctqh")
-Button/styles/normal = SubResource("StyleBoxFlat_l5vh5")
-Button/styles/pressed = SubResource("StyleBoxFlat_nnvkx")
+Button/fonts/font = ExtResource("1_d3cog")
+Button/styles/disabled = SubResource("StyleBoxFlat_wtplb")
+Button/styles/normal = SubResource("StyleBoxFlat_sotpv")
+Button/styles/pressed = SubResource("StyleBoxFlat_ap76s")

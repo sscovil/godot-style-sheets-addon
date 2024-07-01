@@ -23,18 +23,14 @@ const REGEX_COLOR_RGBA: String = r"Color\(([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)
 ## colors).
 const REGEX_COMMENT: String = r"(?m)(^[ \t]*#+(?!([a-fA-F0-9]{3}|[a-fA-F0-9]{4}|[a-fA-F0-9]{6}|[a-fA-F0-9]{8})\b).*$|[ \t]*#+(?!([a-fA-F0-9]{3}|[a-fA-F0-9]{4}|[a-fA-F0-9]{6}|[a-fA-F0-9]{8})\b).*$)"
 
-## RegEx pattern for identifying pixel size values. Matches values like "12" from "12px"; or "0.5"
-## from "0.5px".
-const REGEX_PIXEL_SIZE: String = r"^\d+(\.\d+)?px$"
-
-## RegEx pattern for identifying GSS properties in a GSS file. Matches values like "font" and
-## "res://font.tres" from 'font: "res://font.tres"'; or "color" and "Color.RED" from
+## RegEx pattern for identifying GSS property key/value pairs in a GSS file. Matches values like
+## "font" and "res://font.tres" from 'font: "res://font.tres"'; or "color" and "Color.RED" from
 ## "color: Color.RED;". Ignores trailing semicolons.
 const REGEX_GSS_PROPERTY: String = r"(\w+)\s*:\s*(?:\"?([^\";\n]+)\"?;?|([^;\n]+))"
 
-## RegEx pattern for identifying GSS theme types in a GSS file. Matches values like "Button" and
-## "pressed" from "Button(pressed):"; or "TextEdit" and "" from "TextEdit:".
-const REGEX_GSS_THEME_TYPE: String = r"(\w+)(?:\(([^)]*)\))?"
+## RegEx pattern for identifying pixel size values. Matches values like "12" from "12px"; or "0.5"
+## from "0.5px".
+const REGEX_PIXEL_SIZE: String = r"^\d+(\.\d+)?px$"
 
 ## RegEx pattern for identifying theme override properties. Matches values like "colors" and
 ## "TextEdit" from "theme_override_colors/TextEdit"; or "fonts" and "font" from
@@ -52,7 +48,6 @@ static var regex: Dictionary = {
 	"color_rgba": RegEx.create_from_string(REGEX_COLOR_RGBA),
 	"comment": RegEx.create_from_string(REGEX_COMMENT),
 	"gss_property": RegEx.create_from_string(REGEX_GSS_PROPERTY),
-	"gss_theme_type": RegEx.create_from_string(REGEX_GSS_THEME_TYPE),
 	"pixel_size": RegEx.create_from_string(REGEX_PIXEL_SIZE),
 	"theme_override": RegEx.create_from_string(REGEX_THEME_OVERRIDE),
 	"vector2": RegEx.create_from_string(REGEX_VECTOR2),
@@ -74,37 +69,34 @@ static func dict_to_theme(dict: Dictionary) -> Theme:
 	var theme := Theme.new()
 	
 	# Loop through each key in the GSS dictionary.
-	for key in dict.keys():
-		var props: Dictionary = dict[key]
-		
-		# The `key` will be something like "TextEdit" or "Button:pressed".
-		var theme_type: String = key.get_slice(":", 0)
-		var theme_props: Dictionary = _get_theme_property_types(theme_type)
-		
-		# Theme type style (e.g. "pressed", "hover") appears after the `:`, if present.
-		var style: String = key.get_slice(":", 1) if ":" in key else "normal"
-		
-		if !_is_valid_style(style, theme_props):
-			push_warning("[GSS] Invalid theme type style: %s")
-			continue
-		
-		# Instantiate a new StyleBox that can have properties applied to it.
-		var stylebox_type: String = props.get("stylebox", "StyleBoxFlat")
-		var stylebox = ClassDB.instantiate(stylebox_type)
-		var stylebox_props: Dictionary = _get_stylebox_property_types(stylebox_type)
-		
-		# Loop through each property in the GSS dictionary.
-		for prop: String in props.keys():
-			var value: String = props[prop]
-			var data_type: int = theme_props.get(prop, DATA_TYPE_UNKNOWN)
+	for theme_type in dict.keys():
+		for style in dict[theme_type].keys():
+			var props: Dictionary = dict[theme_type][style]
+			var theme_props: Dictionary = _get_theme_property_types(theme_type)
 			
-			if DATA_TYPE_UNKNOWN == data_type:
-				_set_stylebox_property(stylebox, stylebox_props, prop, theme_type, value)
-			else:
-				_set_theme_property(theme, data_type, prop, theme_type, value)
-					
-		# Apply the StyleBox to the Theme.
-		theme.set_stylebox(style, theme_type, stylebox)
+			# Different theme types (e.g. Button, TextEdit) allow different styles (e.g. disabled,
+			# hover, pressed); properties for invalid types will raise a warning and be ignored.
+			if !_is_valid_style(style, theme_props):
+				push_warning("[GSS] Invalid theme type style: %s")
+				continue
+			
+			# Instantiate a new StyleBox that can have properties applied to it.
+			var stylebox_type: String = props.get("stylebox", "StyleBoxFlat")
+			var stylebox = ClassDB.instantiate(stylebox_type)
+			var stylebox_props: Dictionary = _get_stylebox_property_types(stylebox_type)
+			
+			# Loop through each property in the GSS dictionary.
+			for prop: String in props.keys():
+				var value: String = props[prop]
+				var data_type: int = theme_props.get(prop, DATA_TYPE_UNKNOWN)
+				
+				if DATA_TYPE_UNKNOWN == data_type:
+					_set_stylebox_property(stylebox, stylebox_props, prop, theme_type, value)
+				else:
+					_set_theme_property(theme, data_type, prop, theme_type, value)
+						
+			# Apply the StyleBox to the Theme.
+			theme.set_stylebox(style, theme_type, stylebox)
 	
 	return theme
 
@@ -134,8 +126,9 @@ static func file_to_tres(path: String, output_path: String = "") -> String:
 static func text_to_dict(raw_text: String) -> Dictionary:
 	var text: String = _strip_comments(raw_text)
 	var lines: PackedStringArray = text.split("\n")
-	var styles: Dictionary = {}
+	var result: Dictionary = {}
 	var theme_type: String = ""
+	var style: String = "normal"
 
 	# Loop through each line in the GSS text.
 	for i: int in range(lines.size()):
@@ -144,16 +137,12 @@ static func text_to_dict(raw_text: String) -> Dictionary:
 		if !line:
 			continue  # Ignore blank lines.
 		
-		var is_indented: bool = lines[i].substr(0, 1) == "\t"
-		
-		if is_indented:
-			# If the line is indented, treat it as a property of the previous theme type.
-			_parse_gss_property(line, styles, theme_type)
-		else:
-			# If the line is not indented, treat it as a new theme type.
-			theme_type = _parse_gss_theme_type(line, styles)
+		match _get_indentation_level(lines[i]):
+			0: theme_type = line.trim_suffix(":")
+			1: style = _parse_gss_property(line, result, theme_type, style)
+			2: _parse_gss_property(line, result, theme_type, style)
 	
-	return styles
+	return result
 
 
 ## Saves a Theme object to a resource file at the given output path, returning the output path.
@@ -161,14 +150,6 @@ static func theme_to_tres(theme: Theme, output_path: String) -> String:
 	ResourceSaver.save(theme, output_path)
 	
 	return output_path
-
-
-## Returns an array of keys from `props` that are prefixed with the given key. For example, if
-## the given `props` dictionary contained the Button theme properties, and "border_width" was
-## the given `key` parameter, this function would return:
-## ["border_width_bottom", "border_width_left", "border_width_right", "border_width_top"]
-static func _get_property_group(props: Dictionary, key: String) -> Array:
-	return props.keys().filter(func(k): return k != key and k.begins_with(key))
 
 
 ## Returns a dictionary of property names and their corresponding data types for the given class.
@@ -201,6 +182,14 @@ static func _get_classes_with_theme_properties() -> Array:
 	return classes_with_theme
 
 
+## Returns an array of keys from `props` that are prefixed with the given key. For example, if
+## the given `props` dictionary contained the Button theme properties, and "border_width" was
+## the given `key` parameter, this function would return:
+## ["border_width_bottom", "border_width_left", "border_width_right", "border_width_top"]
+static func _get_property_group(props: Dictionary, key: String) -> Array:
+	return props.keys().filter(func(k): return k != key and k.begins_with(key))
+
+
 ## Returns a dictionary of property names and their corresponding data types for the given StyleBox class.
 static func _get_stylebox_property_types(cls: String) -> Dictionary:
 	var no_inheritance: bool = true
@@ -210,6 +199,24 @@ static func _get_stylebox_property_types(cls: String) -> Dictionary:
 		result.merge(_get_class_property_types("StyleBox", no_inheritance))
 	
 	return result
+
+
+## Returns the number of tab characters at the beginning of a string.
+static func _get_indentation_level(text: String) -> int:
+	var level: float = 0.0
+	
+	for char in text:
+		if char == "\t":
+			# Tabs are one full level of indentation. 
+			level += 1.0
+		elif char == " ":
+			# Four spaces equal one tab. That's just math.
+			level += 0.25
+		else:
+			# Any other character ends the indentation.
+			break
+	
+	return round(level)
 
 
 ## Returns a dictionary of `theme_override_*` property names and their corresponding data types.
@@ -322,42 +329,39 @@ static func _parse_font_size(value: String) -> int:
 	return value as int
 
 
-## Parses a GSS property and adds it to the given `styles` dictionary.
-static func _parse_gss_property(text: String, styles: Dictionary, theme_type: String) -> void:
+## Parses a GSS property and adds it to the given GSS Dictionary.
+static func _parse_gss_property(
+	text: String,
+	dict: Dictionary,
+	theme_type: String,
+	style: String,
+) -> String:
 	var _match: RegExMatch = regex.gss_property.search(text)
 	
 	if !_match:
-		return
+		# If the line does not match the GSS property pattern, return it as a new style.
+		return text.trim_suffix(":")
 	
-	var prop_key: String = _match.strings[1]
-	var prop_value: String = _match.strings[2]
+	var key: String = _match.get_string(1)
+	var value: String = _match.get_string(2)
 
 	# If the property value is a pixel size, remove the "px" suffix.
-	if regex.pixel_size.search(prop_value):
-		prop_value = prop_value.trim_suffix("px")
+	if regex.pixel_size.search(value):
+		value = value.trim_suffix("px")
 	
-	styles[theme_type][prop_key] = prop_value
-
-
-## Parses a GSS theme type and adds it to the given `styles` dictionary. Returns the theme type.
-static func _parse_gss_theme_type(text: String, styles: Dictionary) -> String:
-	var _match: RegExMatch = regex.gss_theme_type.search(text)
+	# Initialize the theme type in the GSS Dictionary, if it does not already exist.
+	if !dict.has(theme_type):
+		dict[theme_type] = {}
 	
-	if !_match:
-		return ""
-	
-	var theme_type: String = _match.strings[1]
-	var theme_type_style: String = _match.strings[2]
+	# Initialize the style for the given theme type, if it does not already exist.
+	if !dict[theme_type].has(style):
+		dict[theme_type][style] = {}
 
-	# Append the style to the theme type, if present.
-	if theme_type_style:
-		theme_type += ":%s" % theme_type_style
+	# Add the property to the GSS Dictionary.
+	dict[theme_type][style][key] = value
 
-	# Initialize the theme type in the `styles` dictionary, if it does not already exist.
-	if !styles.has(theme_type):
-		styles[theme_type] = {}
-	
-	return theme_type
+	# Return the current style.
+	return style
 
 
 ## Parses an icon value from a string by loading the icon resource from the given path.
@@ -372,25 +376,14 @@ static func _parse_stylebox_property(prop: String, text: String, stylebox_props:
 		return text
 	
 	match stylebox_props[prop]:
-		TYPE_BOOL:
-			return _parse_bool(text)
-		
-		TYPE_COLOR:
-			return _parse_color(text)
-		
-		TYPE_FLOAT:
-			return float(text)
-		
-		TYPE_INT:
-			return int(text)
-		
-		TYPE_STRING:
-			return text
-		
-		TYPE_VECTOR2:
-			return _parse_vector2(text)
-
-	push_warning("[GSS] No parser found for StyleBox property: %s" % prop)
+		TYPE_BOOL: return _parse_bool(text)
+		TYPE_COLOR: return _parse_color(text)
+		TYPE_FLOAT: return float(text)
+		TYPE_INT: return int(text)
+		TYPE_STRING: return text
+		TYPE_VECTOR2: return _parse_vector2(text)
+		_: push_warning("[GSS] No parser found for StyleBox property: %s" % prop)
+	
 	return text
 
 
@@ -435,20 +428,11 @@ static func _set_theme_property(
 	value: String,
 ) -> void:
 	match data_type:
-		Theme.DATA_TYPE_COLOR:
-			theme.set_color(prop, theme_type, _parse_color(value))
-		
-		Theme.DATA_TYPE_CONSTANT:
-			theme.set_constant(prop, theme_type, _parse_constant(value))
-		
-		Theme.DATA_TYPE_FONT:
-			theme.set_font(prop, theme_type, _parse_font(value))
-		
-		Theme.DATA_TYPE_FONT_SIZE:
-			theme.set_font_size(prop, theme_type, _parse_font_size(value))
-		
-		Theme.DATA_TYPE_ICON:
-			theme.set_icon(prop, theme_type, _parse_icon(value))
+		Theme.DATA_TYPE_COLOR: theme.set_color(prop, theme_type, _parse_color(value))
+		Theme.DATA_TYPE_CONSTANT: theme.set_constant(prop, theme_type, _parse_constant(value))
+		Theme.DATA_TYPE_FONT: theme.set_font(prop, theme_type, _parse_font(value))
+		Theme.DATA_TYPE_FONT_SIZE: theme.set_font_size(prop, theme_type, _parse_font_size(value))
+		Theme.DATA_TYPE_ICON: theme.set_icon(prop, theme_type, _parse_icon(value))
 
 
 ## Strips comments from the given text.

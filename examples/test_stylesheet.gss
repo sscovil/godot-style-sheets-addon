@@ -16,7 +16,7 @@ Button:
 	
 	# The `px` suffix on pixel size values is optional and will be ignored.
 	font_size: 20px
-	
+
 	# This is the style definition for a Button theme type when it is disabled.
 	disabled:
 		# You can define colors using hex codes, with or without alpha values.

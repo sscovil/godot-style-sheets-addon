@@ -150,14 +150,37 @@ func file_to_tres(
 	return ResourceSaver.save(theme, "%s.%s" % [save_path, save_extension])
 
 
-## Converts GSS text (i.e. from a GSS file) into a GSS Dictionary that can be parsed into a Theme.
+## Returns an array of all class names that have theme properties.
+func get_classes_with_theme_properties() -> Array:
+	var classes_with_theme: Array = []
+	var all_classes: PackedStringArray = ClassDB.get_class_list()
+	
+	for cls: String in all_classes:
+		if has_theme_properties(cls):
+			classes_with_theme.append(cls)
+	
+	return classes_with_theme
+
+
+## Returns `true` if the given class has a `theme` property.
+func has_theme_properties(cls: String) -> bool:
+	var properties: Array[Dictionary] = ClassDB.class_get_property_list(cls)
+	
+	for property: Dictionary in properties:
+		if property.name == "theme":
+			return true
+	
+	return false
+
+
+## Converts GSS text into a GSS Dictionary that can be parsed into a Theme.
 func text_to_dict(raw_text: String) -> Dictionary:
 	var text: String = _strip_comments(raw_text)
 	var lines: PackedStringArray = text.split("\n")
 	var result: Dictionary = {}
 	var theme_type: String = ""
 	var style: String = "normal"
-
+	
 	# Loop through each line in the GSS text.
 	for i: int in range(lines.size()):
 		var line: String = lines[i].strip_edges()
@@ -196,16 +219,22 @@ func _get_class_property_types(cls: Variant, no_inheritance: bool = false) -> Di
 	return result
 
 
-## Returns an array of all class names that have theme properties.
-func _get_classes_with_theme_properties() -> Array:
-	var classes_with_theme: Array = []
-	var all_classes: PackedStringArray = ClassDB.get_class_list()
+## Returns the number of tab characters at the beginning of a string.
+func _get_indentation_level(text: String) -> int:
+	var level: float = 0.0
 	
-	for _class_name: String in all_classes:
-		if _has_theme_properties(_class_name):
-			classes_with_theme.append(_class_name)
+	for char in text:
+		if char == "\t":
+			# Tabs are one full level of indentation. 
+			level += 1.0
+		elif char == " ":
+			# Four spaces equal one tab. That's just math.
+			level += 0.25
+		else:
+			# Any other character ends the indentation.
+			break
 	
-	return classes_with_theme
+	return round(level)
 
 
 ## Returns an array of keys from `props` that are prefixed with the given key. For example, if
@@ -225,24 +254,6 @@ func _get_stylebox_property_types(cls: String) -> Dictionary:
 		result.merge(_get_class_property_types("StyleBox", no_inheritance))
 	
 	return result
-
-
-## Returns the number of tab characters at the beginning of a string.
-func _get_indentation_level(text: String) -> int:
-	var level: float = 0.0
-	
-	for char in text:
-		if char == "\t":
-			# Tabs are one full level of indentation. 
-			level += 1.0
-		elif char == " ":
-			# Four spaces equal one tab. That's just math.
-			level += 0.25
-		else:
-			# Any other character ends the indentation.
-			break
-	
-	return round(level)
 
 
 ## Returns a dictionary of `theme_override_*` property names and their corresponding data types.
@@ -274,17 +285,6 @@ func _get_theme_property_types(theme_type: String) -> Dictionary:
 		result[key] = value
 	
 	return result
-
-
-## Returns `true` if the given class has a `theme` property.
-func _has_theme_properties(_class_name: String) -> bool:
-	var properties: Array[Dictionary] = ClassDB.class_get_property_list(_class_name)
-	
-	for property: Dictionary in properties:
-		if property.name == "theme":
-			return true
-	
-	return false
 
 
 ## Returns `true` if the given style is a valid StyleBox property.
@@ -349,6 +349,10 @@ func _parse_constant(value: String) -> int:
 func _parse_font(value: String) -> Font:
 	var font: Font = load(value)
 	
+	if !font:
+		push_error("[GSS] Font file not found: %s" % value)
+		return font
+	
 	if not value in fonts:
 		fonts.append(value)
 	
@@ -398,6 +402,10 @@ func _parse_gss_property(
 ## Parses an icon value from a string by loading the icon resource from the given path.
 func _parse_icon(value: String) -> Texture2D:
 	var icon: Texture2D = load(value)
+	
+	if !icon:
+		push_error("[GSS] Icon file not found: %s" % value)
+		return icon
 	
 	if not value in icons:
 		icons.append(value)

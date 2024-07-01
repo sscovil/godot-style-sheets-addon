@@ -1,14 +1,14 @@
 [gd_resource type="Theme" load_steps=6 format=3 uid="uid://b8nd4155dwlaw"]
 
-[ext_resource type="FontFile" uid="uid://crfeeuddpgih3" path="res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf" id="1_alxck"]
+[ext_resource type="FontFile" uid="uid://crfeeuddpgih3" path="res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf" id="1_f3el7"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ofqg2"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fldv3"]
 bg_color = Color(1, 0.133333, 0.8, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q1knd"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yef4t"]
 bg_color = Color(1, 0, 0, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6kf12"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6qa0l"]
 bg_color = Color(0, 0, 0, 0.4)
 corner_radius_top_left = 20
 corner_radius_top_right = 20
@@ -19,13 +19,14 @@ expand_margin_top = 20.0
 expand_margin_right = 20.0
 expand_margin_bottom = 20.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r284q"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_iwksp"]
 bg_color = Color(0, 0, 1, 1)
 
 [resource]
 Button/font_sizes/font_size = 20
-Button/fonts/font = ExtResource("1_alxck")
-Button/styles/disabled = SubResource("StyleBoxFlat_ofqg2")
-Button/styles/hover = SubResource("StyleBoxFlat_q1knd")
-Button/styles/normal = SubResource("StyleBoxFlat_6kf12")
-Button/styles/pressed = SubResource("StyleBoxFlat_r284q")
+Button/fonts/font = ExtResource("1_f3el7")
+Button/icons/icon = null
+Button/styles/disabled = SubResource("StyleBoxFlat_fldv3")
+Button/styles/hover = SubResource("StyleBoxFlat_yef4t")
+Button/styles/normal = SubResource("StyleBoxFlat_6qa0l")
+Button/styles/pressed = SubResource("StyleBoxFlat_iwksp")

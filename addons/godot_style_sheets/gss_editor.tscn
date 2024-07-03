@@ -32,7 +32,7 @@ prefer_global_menu = false
 title = "File"
 size = Vector2i(136, 100)
 allow_search = false
-item_count = 7
+item_count = 5
 item_0/text = "New GSS File..."
 item_1/id = 5
 item_1/separator = true
@@ -42,17 +42,15 @@ item_3/text = "Save File"
 item_3/id = 2
 item_4/text = "Save File As..."
 item_4/id = 3
-item_5/id = 6
-item_5/separator = true
-item_6/text = "Close File"
-item_6/id = 4
 
-[node name="FileList" type="ItemList" parent="SplitContainer/FileListContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="SplitContainer/FileListContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-item_count = 2
-item_0/text = "test_stylesheet_copy.gss"
-item_1/text = "test_stylesheet.gss"
+
+[node name="FileList" type="ItemList" parent="SplitContainer/FileListContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
 [node name="FileEditorContainer" type="VBoxContainer" parent="SplitContainer"]
 layout_mode = 2

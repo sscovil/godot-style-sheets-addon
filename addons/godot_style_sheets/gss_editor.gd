@@ -7,8 +7,13 @@ const FILE_DIALOG_POPUP_SIZE := Vector2(800, 600)
 var all_files: Dictionary = {}
 var current_file: String = ""
 var file_dialog: FileDialog
-
-var _save_timer: Timer
+var file_hashes: Dictionary = {}
+var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
+var is_reimporting: bool = false
+var last_modified_times: Dictionary = {}
+var pending_reimports: Array[String] = []
+var reimport_timer: Timer
+var save_timer: Timer
 
 @onready var file_menu: PopupMenu = $SplitContainer/FileListContainer/FileListMenuBar/File
 @onready var file_list: ItemList = $SplitContainer/FileListContainer/ScrollContainer/FileList
@@ -29,12 +34,31 @@ func _ready() -> void:
 	
 	file_list.item_selected.connect(_on_file_list_item_selected)
 	
-	_save_timer = Timer.new()
-	_save_timer.one_shot = true
-	_save_timer.timeout.connect(_save_current_file)
-	add_child(_save_timer)
+	save_timer = Timer.new()
+	save_timer.one_shot = true
+	save_timer.timeout.connect(_save_current_file)
+	add_child(save_timer)
+	
+	reimport_timer = Timer.new()
+	reimport_timer.wait_time = 1.0  # Check every second
+	reimport_timer.one_shot = false
+	reimport_timer.timeout.connect(_process_pending_reimports)
+	add_child(reimport_timer)
+	reimport_timer.start()
 	
 	_populate_file_list()
+
+
+func _load_file() -> void:
+	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	file_dialog.popup_centered(FILE_DIALOG_POPUP_SIZE)
+
+
+func _new_file() -> void:
+	current_file = ""
+	file_editor.text = ""
+	all_files["Untitled"] = ""
+	_update_file_list()
 
 
 func _on_file_menu_id_pressed(id: int) -> void:
@@ -45,16 +69,73 @@ func _on_file_menu_id_pressed(id: int) -> void:
 		3: _save_file_as()
 
 
-func _new_file() -> void:
-	current_file = ""
-	file_editor.text = ""
-	all_files["Untitled"] = ""
-	_update_file_list()
+func _on_file_editor_text_changed() -> void:
+	if !current_file:
+		return
+	
+	all_files[current_file] = file_editor.text
+	save_timer.start(2.0)  # Start a 2-second timer before saving.
 
 
-func _load_file() -> void:
-	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	file_dialog.popup_centered(FILE_DIALOG_POPUP_SIZE)
+func _on_file_list_item_selected(index: int) -> void:
+	var path: String = file_list.get_item_metadata(index)
+	
+	if path in all_files:
+		_save_current_file()  # Save current file before switching.
+		current_file = path
+		file_editor.set_text(all_files[path])
+		file_editor.set_caret_line(0)  # Set cursor to start of file.
+
+
+func _on_file_selected(path: String) -> void:
+	if file_dialog.file_mode == FileDialog.FILE_MODE_OPEN_FILE:
+		_read_file(path)
+	elif file_dialog.file_mode == FileDialog.FILE_MODE_SAVE_FILE:
+		_write_file(path)
+
+
+func _populate_file_list() -> void:
+	_scan_directory("res://")
+
+
+func _process_pending_reimports() -> void:
+	if is_reimporting or pending_reimports.is_empty():
+		return
+	
+	is_reimporting = true
+	
+	# Create an array filtered to only include files that still exist.
+	var to_reimport = pending_reimports.filter(func(p): return FileAccess.file_exists(p))
+	pending_reimports.clear()
+	
+	print("[GSS] Reimporting files: ", to_reimport)
+	file_system.reimport_files(to_reimport)
+	
+	for path in to_reimport:
+		file_hashes[path] = all_files[path].hash()
+	
+	is_reimporting = false
+
+
+func _read_file(path: String) -> void:
+	var file = FileAccess.open(path, FileAccess.READ)
+	
+	if file:
+		current_file = path
+		file_editor.text = file.get_as_text()
+		file.close()
+		all_files[path] = file_editor.text
+		file_hashes[path] = all_files[path].hash()
+		_update_file_list()
+
+
+func _save_current_file() -> void:
+	if !current_file:
+		return
+	
+	var current_hash = all_files[current_file].hash()
+	if current_hash != file_hashes.get(current_file, 0):
+		_write_file(current_file)
 
 
 func _save_file() -> void:
@@ -69,33 +150,28 @@ func _save_file_as() -> void:
 	file_dialog.popup_centered(FILE_DIALOG_POPUP_SIZE)
 
 
-func _on_file_selected(path: String) -> void:
-	if file_dialog.file_mode == FileDialog.FILE_MODE_OPEN_FILE:
-		_read_file(path)
-	elif file_dialog.file_mode == FileDialog.FILE_MODE_SAVE_FILE:
-		_write_file(path)
-
-
-func _read_file(path: String) -> void:
-	var file = FileAccess.open(path, FileAccess.READ)
+func _scan_directory(path: String) -> void:
+	var dir = DirAccess.open(path)
 	
-	if file:
-		current_file = path
-		file_editor.text = file.get_as_text()
-		file.close()
-		all_files[path] = file_editor.text
-		_update_file_list()
-
-
-func _write_file(path: String) -> void:
-	var file = FileAccess.open(path, FileAccess.WRITE)
-	
-	if file:
-		current_file = path
-		file.store_string(file_editor.text)
-		file.close()
-		all_files[path] = file_editor.text
-		# Don't call `_update_file_list()` here; it is unnecessary for saves.
+	if dir:
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		
+		while file_name != "":
+			# Skip hidden files and directories (those starting with a dot).
+			if file_name.begins_with("."):
+				continue
+			
+			var full_path = path.path_join(file_name)
+			
+			if dir.current_is_dir():
+				_scan_directory(full_path)  # Recursive call for subdirectories.
+			elif file_name.get_extension() == "gss":
+				_read_file(full_path)
+				
+			file_name = dir.get_next()
+		
+		dir.list_dir_end()
 
 
 func _update_file_list() -> void:
@@ -121,50 +197,19 @@ func _update_file_list() -> void:
 	file_list.ensure_current_is_visible()
 
 
-func _on_file_list_item_selected(index: int) -> void:
-	var path: String = file_list.get_item_metadata(index)
+func _write_file(path: String) -> void:
+	var file = FileAccess.open(path, FileAccess.WRITE)
 	
-	if path in all_files:
-		_save_current_file()  # Save current file before switching.
-		current_file = path
-		file_editor.set_text(all_files[path])
-		file_editor.set_caret_line(0)  # Set cursor to start of file.
-
-
-func _on_file_editor_text_changed() -> void:
-	if current_file != "":
-		all_files[current_file] = file_editor.text
-		_save_timer.start(2.0)  # Start a 2-second timer before saving.
-
-
-func _save_current_file() -> void:
-	if current_file != "":
-		_write_file(current_file)
-
-
-func _populate_file_list() -> void:
-	_scan_directory("res://")
-
-
-func _scan_directory(path: String) -> void:
-	var dir = DirAccess.open(path)
+	if !file:
+		return
 	
-	if dir:
-		dir.list_dir_begin()
-		var file_name = dir.get_next()
-		
-		while file_name != "":
-			# Skip hidden files and directories (those starting with a dot).
-			if file_name.begins_with("."):
-				continue
-			
-			var full_path = path.path_join(file_name)
-			
-			if dir.current_is_dir():
-				_scan_directory(full_path)  # Recursive call for subdirectories.
-			elif file_name.get_extension() == "gss":
-				_read_file(full_path)
-				
-			file_name = dir.get_next()
-		
-		dir.list_dir_end()
+	file.store_string(file_editor.text)
+	file.close()
+	all_files[path] = file_editor.text
+	
+	# Update the file system, so other modules can know that the file has changed.
+	file_system.update_file(path)
+	
+	# Queue the file up for re-importing.
+	if not path in pending_reimports:
+		pending_reimports.append(path)

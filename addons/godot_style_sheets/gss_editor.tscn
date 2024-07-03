@@ -51,6 +51,9 @@ size_flags_vertical = 3
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+item_count = 2
+item_0/text = "test_stylesheet.gss"
+item_1/text = "test_stylesheet_copy.gss"
 
 [node name="FileEditorContainer" type="VBoxContainer" parent="SplitContainer"]
 layout_mode = 2

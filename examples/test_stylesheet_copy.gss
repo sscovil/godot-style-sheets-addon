@@ -1,4 +1,4 @@
-## This is a Godot style sheet! (Copy)
+## This is a Godot style sheet! (Neat!)
 
 # This is the style definition for a Button theme type.
 Button:
@@ -37,4 +37,4 @@ Button:
 	# This is the style definition for a Button theme type when it is pressed.
 	pressed:
 		# You can define colors using case-insensitive color names that are in Godot's Color constants.
-		bg_color: blue  # This is the same as `font_color: Color.BLUE`.
+		bg_color: purple  # This is the same as `font_color: Color.BLUE`.

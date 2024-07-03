@@ -1,0 +1,40 @@
+## This is a Godot style sheet! (Copy)
+
+# This is the style definition for a Button theme type.
+Button:
+	# You can define colors using Godot's Color class.
+	bg_color: Color(0, 0, 0, 0.4)
+	
+	# The corner_radius property applies the same radius to top left, top right, bottom left, and bottom right.
+	corner_radius: 20px
+	
+	# Likewise, you can define top, bottom, left, and right separately, or apply the same margin value to all sides.
+	expand_margin: 20px
+	
+	# You can define fonts using the `res://` prefix to reference a font file in your project.
+	font: "res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf"
+	
+	# The `px` suffix on pixel size values is optional and will be ignored.
+	font_size: 20px
+
+	# This is the style definition for a Button theme type when it is disabled.
+	disabled:
+		# You can define colors using hex codes, with or without alpha values.
+		bg_color: #FF22CC  # This would also work: `bg_color: #F2C`.
+
+		# These properties will override the `normal` style values for the Button theme type.
+		corner_radius_top_left: 0
+		corner_radius_bottom_right: 0
+		expand_margin_top: 0
+		expand_margin_bottom: 0
+	
+	# This is the style definition for a Button theme type when it is hovered over.
+	hover:
+		# You can define colors using Godot's Color constants.
+		bg_color: Color.RED
+	
+
+	# This is the style definition for a Button theme type when it is pressed.
+	pressed:
+		# You can define colors using case-insensitive color names that are in Godot's Color constants.
+		bg_color: blue  # This is the same as `font_color: Color.BLUE`.

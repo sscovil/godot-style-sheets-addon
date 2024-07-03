@@ -1,0 +1,16 @@
+[remap]
+
+importer="godot_style_sheets"
+type="Theme"
+uid="uid://d2rmkv3l5agvf"
+path="res://.godot/imported/test_stylesheet_copy.gss-c87d7437346bb13823c5ebc94e1a322f.tres"
+
+[deps]
+
+files=["res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf"]
+
+source_file="res://examples/test_stylesheet_copy.gss"
+dest_files=["res://.godot/imported/test_stylesheet_copy.gss-c87d7437346bb13823c5ebc94e1a322f.tres", "res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf"]
+
+[params]
+

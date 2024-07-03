@@ -1,3 +1,4 @@
+@tool
 extends Node
 
 ## Used to indicate that a GSS property is not a Theme.DATA_TYPE_* property and is most likely a
@@ -111,10 +112,11 @@ func file_to_dict(source_path: String) -> Dictionary:
 	var file: FileAccess = FileAccess.open(source_path, FileAccess.READ)
 	
 	if !file:
-		push_error("[GSS] Unable to read file: %s" % source_path)
+		push_error("[GSS] Unable to open file: %s" % source_path)
 		return {}
 	
 	var text: String = file.get_as_text()
+	file.close()
 	
 	return text_to_dict(text)
 
@@ -133,8 +135,11 @@ func file_to_tres(
 	var file: FileAccess = FileAccess.open(source_path, FileAccess.READ)
 	
 	if !file:
-		push_error("[GSS] Unable to read file: %s" % source_path)
+		push_error("[GSS] Unable to open file: %s" % source_path)
 		return ERR_FILE_CANT_READ
+	
+	var text: String = file.get_as_text()
+	file.close()
 	
 	if !save_path:
 		# Remove the ".gss" file extension from the source path.
@@ -143,7 +148,6 @@ func file_to_tres(
 		# Remove the file extension from the save path, if it exists.
 		save_path = save_path.trim_suffix(save_extension)
 	
-	var text: String = file.get_as_text()
 	var dict: Dictionary = text_to_dict(text)
 	var theme: Theme = dict_to_theme(dict)
 	

@@ -1,0 +1,106 @@
+[gd_scene load_steps=3 format=3 uid="uid://bux6owfo76oki"]
+
+[ext_resource type="Script" path="res://addons/godot_style_sheets/gss_editor.gd" id="1_803gf"]
+[ext_resource type="SyntaxHighlighter" uid="uid://jch0u5uyyx62" path="res://addons/godot_style_sheets/gss_syntax_highlighter.tres" id="1_b4liw"]
+
+[node name="GSSEditor" type="VBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_803gf")
+
+[node name="SplitContainer" type="HSplitContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="FileListContainer" type="VBoxContainer" parent="SplitContainer"]
+custom_minimum_size = Vector2(400, 2.08165e-12)
+layout_mode = 2
+
+[node name="FileListMenuBar" type="MenuBar" parent="SplitContainer/FileListContainer"]
+custom_minimum_size = Vector2(2.08165e-12, 30)
+layout_mode = 2
+flat = true
+prefer_global_menu = false
+
+[node name="File" type="PopupMenu" parent="SplitContainer/FileListContainer/FileListMenuBar"]
+title = "File"
+size = Vector2i(136, 100)
+allow_search = false
+item_count = 7
+item_0/text = "New GSS File..."
+item_1/id = 5
+item_1/separator = true
+item_2/text = "Load GSS File..."
+item_2/id = 1
+item_3/text = "Save File"
+item_3/id = 2
+item_4/text = "Save File As..."
+item_4/id = 3
+item_5/id = 6
+item_5/separator = true
+item_6/text = "Close File"
+item_6/id = 4
+
+[node name="FileList" type="ItemList" parent="SplitContainer/FileListContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+item_count = 2
+item_0/text = "test_stylesheet_copy.gss"
+item_1/text = "test_stylesheet.gss"
+
+[node name="FileEditorContainer" type="VBoxContainer" parent="SplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FileEditor" type="CodeEdit" parent="SplitContainer/FileEditorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "## This is a Godot style sheet!
+
+# This is the style definition for a Button theme type.
+Button:
+	# You can define colors using Godot's Color class.
+	bg_color: Color(0, 0, 0, 0.4)
+	
+	# The corner_radius property applies the same radius to top left, top right, bottom left, and bottom right.
+	corner_radius: 20px
+	
+	# Likewise, you can define top, bottom, left, and right separately, or apply the same margin value to all sides.
+	expand_margin: 20px
+	
+	# You can define fonts using the `res://` prefix to reference a font file in your project.
+	font: \"res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf\"
+	
+	# The `px` suffix on pixel size values is optional and will be ignored.
+	font_size: 20px
+
+	# This is the style definition for a Button theme type when it is disabled.
+	disabled:
+		# You can define colors using hex codes, with or without alpha values.
+		bg_color: #FF22CC  # This would also work: `bg_color: #F2C`.
+
+		# These properties will override the `normal` style values for the Button theme type.
+		corner_radius_top_left: 0
+		corner_radius_bottom_right: 0
+		expand_margin_top: 0
+		expand_margin_bottom: 0
+	
+	# This is the style definition for a Button theme type when it is hovered over.
+	hover:
+		# You can define colors using Godot's Color constants.
+		bg_color: Color.RED
+	
+
+	# This is the style definition for a Button theme type when it is pressed.
+	pressed:
+		# You can define colors using case-insensitive color names that are in Godot's Color constants.
+		bg_color: blue  # This is the same as `font_color: Color.BLUE`.
+"
+syntax_highlighter = ExtResource("1_b4liw")

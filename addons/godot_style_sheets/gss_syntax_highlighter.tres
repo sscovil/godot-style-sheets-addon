@@ -1,0 +1,6 @@
+[gd_resource type="SyntaxHighlighter" script_class="GSSSyntaxHighlighter" load_steps=2 format=3 uid="uid://jch0u5uyyx62"]
+
+[ext_resource type="Script" path="res://addons/godot_style_sheets/gss_syntax_highlighter.gd" id="1_kc4rm"]
+
+[resource]
+script = ExtResource("1_kc4rm")

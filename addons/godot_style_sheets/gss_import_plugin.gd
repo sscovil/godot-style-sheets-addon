@@ -1,4 +1,5 @@
 @tool
+class_name GSSEditorImportPlugin
 extends EditorImportPlugin
 
 var GSS: Node = preload("res://addons/godot_style_sheets/gss.gd").new()
@@ -51,7 +52,7 @@ func _get_save_extension() -> String:
 
 
 func _get_visible_name() -> String:
-	return "Godot Style Sheets"
+	return "Godot Style Sheet"
 
 
 func _import(

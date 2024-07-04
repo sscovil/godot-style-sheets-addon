@@ -76,7 +76,12 @@ func _on_file_editor_text_changed() -> void:
 		return
 	
 	all_files[current_file] = file_editor.text
-	save_timer.start(AUTO_SAVE_DELAY)  # Start a timer before saving.
+	
+	# Auto-save after a short delay of inactivity, if the auto-complete window is not acitve. This
+	# prevents the file from auto-saving while the user is looking through the auto-complete options.
+	# The delay also prevents the file from being saved too frequently.
+	if !file_editor.is_code_completion_active:
+		save_timer.start(AUTO_SAVE_DELAY)
 
 
 func _on_file_list_item_selected(index: int) -> void:

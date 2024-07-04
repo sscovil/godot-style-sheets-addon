@@ -9,6 +9,9 @@ const DATA_TYPE_UNKNOWN: int = -1
 ## value.
 const DEFAULT_COLOR: Color = Color.WHITE
 
+## Used when no theme type style (e.g. "disabled", "hover", "pressed") is specified.
+const DEFAULT_STYLE: String = "normal"
+
 ## RegEx pattern for identifying Color constant values. Matches values like "RED" from "Color.RED",
 ## or just "red".
 const REGEX_COLOR_CONSTANT: String = r"(?:Color\.)?([\w]+)"
@@ -166,6 +169,11 @@ func get_classes_with_theme_properties() -> Array[String]:
 	return classes_with_theme
 
 
+## Returns an array of all theme properties for the given class.
+func get_theme_properties(cls: String) -> Array:
+	return _get_theme_property_types(cls).keys() if ClassDB.class_exists(cls) else []
+
+
 ## Returns `true` if the given class has a `theme` property.
 func has_theme_properties(cls: String) -> bool:
 	var properties: Array[Dictionary] = ClassDB.class_get_property_list(cls)
@@ -183,7 +191,7 @@ func text_to_dict(raw_text: String) -> Dictionary:
 	var lines: PackedStringArray = text.split("\n")
 	var result: Dictionary = {}
 	var theme_type: String = ""
-	var style: String = "normal"
+	var style: String = DEFAULT_STYLE
 	
 	# Loop through each line in the GSS text.
 	for i: int in range(lines.size()):
@@ -192,7 +200,7 @@ func text_to_dict(raw_text: String) -> Dictionary:
 		if !line:
 			continue  # Ignore blank lines.
 		
-		match _get_indentation_level(lines[i]):
+		match get_indentation_level(lines[i]):
 			0: theme_type = line.trim_suffix(":")
 			1: style = _parse_gss_property(line, result, theme_type, style)
 			2: _parse_gss_property(line, result, theme_type, style)
@@ -224,7 +232,7 @@ func _get_class_property_types(cls: Variant, no_inheritance: bool = false) -> Di
 
 
 ## Returns the number of tab characters at the beginning of a string.
-func _get_indentation_level(text: String) -> int:
+func get_indentation_level(text: String) -> int:
 	var level: float = 0.0
 	
 	for char in text:

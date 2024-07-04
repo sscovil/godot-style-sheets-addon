@@ -3,7 +3,7 @@
 # This is the style definition for a Button theme type.
 Button:
 	# You can define colors using Godot's Color class.
-	bg_color: Color(0, 0, 0, 0.4)		
+	bg_color: Color(0, 0, 0, 0.4)
 	
 	# The corner_radius property applies the same radius to top left, top right, bottom left, and bottom right.
 	corner_radius: 20px

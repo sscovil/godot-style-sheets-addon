@@ -45,18 +45,6 @@ func _on_text_changed() -> void:
 		2: _update_stylebox_code_completion_options()
 
 
-func _parse_stylebox_value(text: String, default_value: String = "") -> String:
-	var regex_match: RegExMatch = GSS.regex.gss_property.search(text)
-	
-	if !regex_match:
-		return default_value
-	
-	var key: String = regex_match.get_string(1)
-	var value: String = regex_match.get_string(2)
-	
-	return value if "stylebox" == key else default_value
-
-
 func _update_current_data() -> void:
 	var cursor_line: int = get_caret_line()
 	var clean_text: String = GSS.strip_comments(text)
@@ -76,7 +64,8 @@ func _update_current_data() -> void:
 			match current_indent:
 				0: current_theme_type = line.trim_suffix(":")
 				1: current_style = line.trim_suffix(":")
-				2: current_stylebox = _parse_stylebox_value(line, current_stylebox)
+		elif line.begins_with("stylebox:"):
+			current_stylebox = line.get_slice(":", 1).strip_edges()
 		
 		# When we find the current theme type, ensure current style is set and exit the `for` loop.
 		if current_theme_type:
@@ -92,7 +81,8 @@ func _update_current_data() -> void:
 			if line and GSS.get_indentation_level(line) < 2:
 				break  # Stop when a property is defined at a lower indentation level.
 			
-			current_stylebox = _parse_stylebox_value(line, current_stylebox)
+			if line.begins_with("stylebox:"):
+				current_stylebox = line.get_slice(":", 1).strip_edges()
 	
 	if !current_stylebox:
 		current_stylebox = GSS.DEFAULT_STYLEBOX

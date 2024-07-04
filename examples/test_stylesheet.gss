@@ -32,7 +32,6 @@ Button:
 	hover:
 		# You can define colors using Godot's Color constants.
 		bg_color: Color.RED
-	
 
 	# This is the style definition for a Button theme type when it is pressed.
 	pressed:

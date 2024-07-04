@@ -1,7 +1,11 @@
-[gd_scene load_steps=3 format=3 uid="uid://bux6owfo76oki"]
+[gd_scene load_steps=5 format=3 uid="uid://bux6owfo76oki"]
 
 [ext_resource type="Script" path="res://addons/godot_style_sheets/gss_editor.gd" id="1_803gf"]
+[ext_resource type="Script" path="res://addons/godot_style_sheets/gss_syntax_highlighter.gd" id="2_c2wjg"]
 [ext_resource type="Script" path="res://addons/godot_style_sheets/gss_code_edit.gd" id="3_8vnvk"]
+
+[sub_resource type="SyntaxHighlighter" id="SyntaxHighlighter_deiyl"]
+script = ExtResource("2_c2wjg")
 
 [node name="GSSEditor" type="VBoxContainer"]
 anchors_preset = 15
@@ -103,6 +107,7 @@ Button:
 		# You can define colors using case-insensitive color names that are in Godot's Color constants.
 		bg_color: blue  # This is the same as `font_color: Color.BLUE`.
 "
+syntax_highlighter = SubResource("SyntaxHighlighter_deiyl")
 gutters_draw_line_numbers = true
 delimiter_comments = Array[String](["##", "#"])
 code_completion_enabled = true

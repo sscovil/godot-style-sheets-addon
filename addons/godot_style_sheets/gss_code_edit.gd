@@ -15,6 +15,7 @@ func _ready() -> void:
 	set_comment_delimiters(["# ", "##"])
 	set_code_completion_enabled(true)
 	set_draw_line_numbers(true)
+	set_syntax_highlighter(GSSSyntaxHighlighter.new())
 	
 	text_changed.connect(_on_text_changed)
 
@@ -128,7 +129,7 @@ func _update_stylebox_code_completion_options() -> void:
 	_update_code_completion_options(
 		options,
 		CodeEdit.KIND_MEMBER,
-		Color.POWDER_BLUE,
+		GSSSyntaxHighlighter.STYLEBOX_PROPERTY_COLOR,
 		null,
 		null,
 		CodeEdit.CodeCompletionLocation.LOCATION_OTHER,
@@ -141,7 +142,7 @@ func _update_theme_type_code_completion_options() -> void:
 	_update_code_completion_options(
 		options,
 		CodeEdit.KIND_CLASS,
-		Color.PALE_GREEN,
+		GSSSyntaxHighlighter.THEME_TYPE_PROPERTY_COLOR,
 		null,
 		null,
 		CodeEdit.CodeCompletionLocation.LOCATION_OTHER,
@@ -154,7 +155,7 @@ func _update_theme_style_code_completion_options() -> void:
 	_update_code_completion_options(
 		options,
 		CodeEdit.KIND_MEMBER,
-		Color.WHITE_SMOKE,
+		GSSSyntaxHighlighter.STYLE_PROPERTY_COLOR,
 		null,
 		null,
 		CodeEdit.CodeCompletionLocation.LOCATION_LOCAL,

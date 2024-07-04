@@ -3,9 +3,11 @@ class_name GSSCodeEdit
 extends CodeEdit
 
 var current_indent: int = 0
+var current_line: String = ""
 var current_theme_type: String = ""
 var current_style: String = ""
 var current_stylebox: String = ""
+
 var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 
 
@@ -37,20 +39,24 @@ func _on_resources_reimported(resources: PackedStringArray) -> void:
 
 
 func _on_text_changed() -> void:
-	_update_current_data()
+	_update_current_state()
 	
-	match current_indent:
-		0: _update_theme_type_code_completion_options()
-		1: _update_theme_style_code_completion_options()
-		2: _update_stylebox_code_completion_options()
+	var is_before_colon: bool = current_line.find(":") == -1
+	
+	if is_before_colon:
+		# Find the proper code completion options for the current indentation level.
+		match current_indent:
+			0: _update_theme_type_code_completion_options()
+			1: _update_theme_style_code_completion_options()
+			2: _update_stylebox_code_completion_options()
 
 
-func _update_current_data() -> void:
+func _update_current_state() -> void:
 	var cursor_line: int = get_caret_line()
 	var clean_text: String = GSS.strip_comments(text)
 	var lines: PackedStringArray = clean_text.split("\n")
-	var current_line: String = lines[cursor_line]
 	
+	current_line = lines[cursor_line]
 	current_indent = GSS.get_indentation_level(current_line)
 	current_theme_type = ""
 	current_style = ""

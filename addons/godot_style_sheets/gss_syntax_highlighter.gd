@@ -9,6 +9,10 @@ const STYLEBOX_PROPERTY_COLOR := Color.POWDER_BLUE
 const THEME_TYPE_PROPERTY_COLOR := Color.PALE_GREEN
 
 
+## Returns a dictionary with column numbers as keys and syntax highlighting data dictionaries as
+## values. The column number keys denote the start of a region, and the region will end if another
+## region is found (or at the end of the line). The nested syntax highlighting data dictionaries
+## contain the data for that region, currently only the key "color" is supported.
 func _get_line_syntax_highlighting(line: int) -> Dictionary:
 	var color_map: Dictionary = {}
 	var editor: TextEdit = get_text_edit()
@@ -31,28 +35,19 @@ func _get_line_syntax_highlighting(line: int) -> Dictionary:
 		1: property_color = STYLE_PROPERTY_COLOR
 		2: property_color = STYLEBOX_PROPERTY_COLOR
 		_: property_color = INVALID_COLOR
-
+	
 	# Color property name (up to colon or comment)
-	var property_end: int = colon_pos if colon_pos != -1 else (comment_pos if comment_pos != -1 else text.length())
-	color_map[indent] = {"color": property_color, "end_column": property_end}
-
+	color_map[indent] = {"color": property_color}
+	
 	# Color property value (after colon, up to comment or end of line)
 	if colon_pos != -1:
 		var value_start: int = colon_pos + 1
 		var value_end: int = comment_pos if comment_pos != -1 else text.length()
 		if value_start < value_end:
-			color_map[value_start] = {"color": PROPERTY_VALUE_COLOR, "end_column": value_end}
-
+			color_map[value_start] = {"color": PROPERTY_VALUE_COLOR}
+	
 	# Color comment
 	if comment_pos != -1:
 		color_map[comment_pos] = {"color": COMMENT_COLOR}
-
+	
 	return color_map
-
-
-func _get_name() -> String:
-	return "GSS"
-
-
-func _get_supported_languages() -> PackedStringArray:
-	return ["gss"]

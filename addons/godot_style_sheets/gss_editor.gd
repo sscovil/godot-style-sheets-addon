@@ -2,6 +2,7 @@
 class_name GSSEditor
 extends VBoxContainer
 
+const AUTO_SAVE_DELAY := 2.0  # Seconds to wait before saving, after a change is made.
 const FILE_DIALOG_POPUP_SIZE := Vector2(800, 600)
 
 var all_files: Dictionary = {}
@@ -30,6 +31,7 @@ func _ready() -> void:
 	add_child(file_dialog)
 
 	file_dialog.file_selected.connect(_on_file_selected)
+	
 	file_editor.text_changed.connect(_on_file_editor_text_changed)
 	
 	file_list.item_selected.connect(_on_file_list_item_selected)
@@ -74,7 +76,7 @@ func _on_file_editor_text_changed() -> void:
 		return
 	
 	all_files[current_file] = file_editor.text
-	save_timer.start(2.0)  # Start a 2-second timer before saving.
+	save_timer.start(AUTO_SAVE_DELAY)  # Start a timer before saving.
 
 
 func _on_file_list_item_selected(index: int) -> void:
@@ -105,14 +107,16 @@ func _process_pending_reimports() -> void:
 	is_reimporting = true
 	
 	# Create an array filtered to only include files that still exist.
-	var to_reimport = pending_reimports.filter(func(p): return FileAccess.file_exists(p))
+	var to_reimport = pending_reimports.filter(func(path): return FileAccess.file_exists(path))
 	pending_reimports.clear()
+	
+	
+	# Notify file editor when resources are reloaded.
+	if !file_system.resources_reimported.is_connected(file_editor._on_resources_reimported):
+		file_system.resources_reimported.connect(file_editor._on_resources_reimported)
 	
 	print("[GSS] Reimporting files: ", to_reimport)
 	file_system.reimport_files(to_reimport)
-	
-	for path in to_reimport:
-		file_hashes[path] = all_files[path].hash()
 	
 	is_reimporting = false
 
@@ -205,7 +209,12 @@ func _write_file(path: String) -> void:
 	
 	file.store_string(file_editor.text)
 	file.close()
+	
+	# Update file contents in memory.
 	all_files[path] = file_editor.text
+	
+	# Update file hash so new changes can be detected.
+	file_hashes[path] = all_files[path].hash()
 	
 	# Update the file system, so other modules can know that the file has changed.
 	file_system.update_file(path)

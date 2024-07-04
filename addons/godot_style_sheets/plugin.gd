@@ -28,12 +28,3 @@ func _exit_tree():
 	# Deregister editor import plugin.
 	remove_import_plugin(import_plugin)
 	import_plugin = null
-
-
-func _handles(object: Object) -> bool:
-	return object is GSSScript
-
-
-func _edit(object: Object) -> void:
-	if object is GSSScript:
-		EditorInterface.edit_script(object)

@@ -17,4 +17,3 @@ func _ready() -> void:
 	# You can also read the contents of a `.gss` file into a Theme object for use in your code:
 	var theme: Theme = GSS.file_to_theme("res://examples/test_stylesheet.gss")
 	print(theme.get_theme_item_list(Theme.DATA_TYPE_STYLEBOX, "Button"))
-	

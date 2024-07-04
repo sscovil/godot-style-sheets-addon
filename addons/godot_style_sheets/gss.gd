@@ -155,8 +155,8 @@ func file_to_tres(
 
 
 ## Returns an array of all class names that have theme properties.
-func get_classes_with_theme_properties() -> Array:
-	var classes_with_theme: Array = []
+func get_classes_with_theme_properties() -> Array[String]:
+	var classes_with_theme: Array[String] = []
 	var all_classes: PackedStringArray = ClassDB.get_class_list()
 	
 	for cls: String in all_classes:

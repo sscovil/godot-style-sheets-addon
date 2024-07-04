@@ -7,7 +7,6 @@ var current_theme_type: String = ""
 var current_style: String = ""
 var current_stylebox: String = ""
 var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
-var is_code_completion_active: bool = false
 
 
 func _ready() -> void:
@@ -15,17 +14,7 @@ func _ready() -> void:
 	set_code_completion_enabled(true)
 	set_draw_line_numbers(true)
 	
-	code_completion_requested.connect(_on_code_completion_requested)
 	text_changed.connect(_on_text_changed)
-
-
-func _confirm_code_completion(replace: bool) -> void:
-	is_code_completion_active = false
-	super.confirm_code_completion(replace)
-
-
-func _on_code_completion_requested() -> void:
-	is_code_completion_active = true
 
 
 func _on_resources_reimported(resources: PackedStringArray) -> void:
@@ -57,7 +46,11 @@ func _on_text_changed() -> void:
 
 
 func _parse_stylebox_value(text: String, default_value: String = "") -> String:
-	var regex_match: RegExMatch = GSS.regex.gss_property.match(text)
+	var regex_match: RegExMatch = GSS.regex.gss_property.search(text)
+	
+	if !regex_match:
+		return default_value
+	
 	var key: String = regex_match.get_string(1)
 	var value: String = regex_match.get_string(2)
 	
@@ -66,7 +59,8 @@ func _parse_stylebox_value(text: String, default_value: String = "") -> String:
 
 func _update_current_data() -> void:
 	var cursor_line: int = get_caret_line()
-	var lines: PackedStringArray = text.split("\n")
+	var clean_text: String = GSS.strip_comments(text)
+	var lines: PackedStringArray = clean_text.split("\n")
 	var current_line: String = lines[cursor_line]
 	
 	current_indent = GSS.get_indentation_level(current_line)
@@ -78,7 +72,7 @@ func _update_current_data() -> void:
 	for i in range(cursor_line, -1, -1):
 		var line = lines[i].strip_edges()
 		
-		if line.ends_with(":"): # TODO: and if not preceded by a `#` comment delimeter.
+		if line.ends_with(":"):
 			match current_indent:
 				0: current_theme_type = line.trim_suffix(":")
 				1: current_style = line.trim_suffix(":")

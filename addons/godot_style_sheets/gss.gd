@@ -38,10 +38,14 @@ const REGEX_GSS_PROPERTY: String = r"(\w+)\s*:\s*(?:\"?([^\";\n]+)\"?;?|([^;\n]+
 ## from "0.5px".
 const REGEX_PIXEL_SIZE: String = r"^\d+(\.\d+)?px$"
 
+## RegEx pattern for matching snake case strings. Matches "foo_bar", but not "Foo", "Bar", "FooBar",
+## or "Foo Bar".
+const REGEX_SNAKE_CASE: String = r"^([a-z0-9_]+)$"
+
 ## RegEx pattern for identifying theme override properties. Matches values like "colors" and
-## "TextEdit" from "theme_override_colors/TextEdit"; or "fonts" and "font" from
+## "font_color" from "theme_override_colors/font_color"; or "fonts" and "font" from
 ## "theme_override_fonts/font".
-const REGEX_THEME_OVERRIDE: String = r"theme_override_([a-z_]+)/([a-z_]+)"
+const REGEX_THEME_OVERRIDE: String = r"theme_override_([a-z0-9_]+)/([a-z0-9_]+)"
 
 ## RegEx pattern for identifying Vector2 values. Matches values like "5" and "20" from
 ## "Vector2(5, 20)"; or "-20" and "100" from "Vector2(-20, 100)".
@@ -61,6 +65,7 @@ var regex: Dictionary = {
 	"comment": RegEx.create_from_string(REGEX_COMMENT),
 	"gss_property": RegEx.create_from_string(REGEX_GSS_PROPERTY),
 	"pixel_size": RegEx.create_from_string(REGEX_PIXEL_SIZE),
+	"snake_case": RegEx.create_from_string(REGEX_SNAKE_CASE),
 	"theme_override": RegEx.create_from_string(REGEX_THEME_OVERRIDE),
 	"vector2": RegEx.create_from_string(REGEX_VECTOR2),
 }
@@ -172,6 +177,24 @@ func get_classes_with_theme_properties() -> Array[String]:
 	return classes_with_theme
 
 
+## Returns the number of tab characters at the beginning of a string.
+func get_indentation_level(text: String) -> int:
+	var level: float = 0.0
+	
+	for char in text:
+		if char == "\t":
+			# Tabs are one full level of indentation. 
+			level += 1.0
+		elif char == " ":
+			# Four spaces equal one tab. That's just math.
+			level += 0.25
+		else:
+			# Any other character ends the indentation.
+			break
+	
+	return round(level)
+
+
 ## Returns an array of all theme properties for the given class.
 func get_stylebox_properties(cls: String) -> Array:
 	var result: Array = ["stylebox"]
@@ -197,9 +220,14 @@ func has_theme_properties(cls: String) -> bool:
 	return false
 
 
+## Strips comments from the given text.
+func strip_comments(text: String) -> String:
+	return regex.comment.sub(text, '', true)
+
+
 ## Converts GSS text into a GSS Dictionary that can be parsed into a Theme.
 func text_to_dict(raw_text: String) -> Dictionary:
-	var text: String = _strip_comments(raw_text)
+	var text: String = strip_comments(raw_text)
 	var lines: PackedStringArray = text.split("\n")
 	var result: Dictionary = {}
 	var theme_type: String = ""
@@ -238,27 +266,12 @@ func _get_class_property_types(cls: Variant, no_inheritance: bool = false) -> Di
 	for prop in props:
 		var key: String = prop.name
 		var value: int = prop.type
-		result[key] = value
+		
+		# Ignore any property names that are not snake_case.
+		if regex.snake_case.search(key):
+			result[key] = value
 	
 	return result
-
-
-## Returns the number of tab characters at the beginning of a string.
-func get_indentation_level(text: String) -> int:
-	var level: float = 0.0
-	
-	for char in text:
-		if char == "\t":
-			# Tabs are one full level of indentation. 
-			level += 1.0
-		elif char == " ":
-			# Four spaces equal one tab. That's just math.
-			level += 0.25
-		else:
-			# Any other character ends the indentation.
-			break
-	
-	return round(level)
 
 
 ## Returns an array of keys from `props` that are prefixed with the given key. For example, if
@@ -501,8 +514,3 @@ func _set_theme_property(
 		Theme.DATA_TYPE_FONT: theme.set_font(prop, theme_type, _parse_font(value))
 		Theme.DATA_TYPE_FONT_SIZE: theme.set_font_size(prop, theme_type, _parse_font_size(value))
 		Theme.DATA_TYPE_ICON: theme.set_icon(prop, theme_type, _parse_icon(value))
-
-
-## Strips comments from the given text.
-func _strip_comments(text: String) -> String:
-	return regex.comment.sub(text, '', true)

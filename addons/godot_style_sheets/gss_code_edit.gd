@@ -5,12 +5,13 @@ extends CodeEdit
 var current_indent: int = 0
 var current_theme_type: String = ""
 var current_style: String = ""
+var current_stylebox: String = ""
 var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 var is_code_completion_active: bool = false
 
 
 func _ready() -> void:
-	set_comment_delimiters(["#"])
+	set_comment_delimiters(["# ", "##"])
 	set_code_completion_enabled(true)
 	set_draw_line_numbers(true)
 	
@@ -55,6 +56,14 @@ func _on_text_changed() -> void:
 		2: _update_stylebox_code_completion_options()
 
 
+func _parse_stylebox_value(text: String, default_value: String = "") -> String:
+	var regex_match: RegExMatch = GSS.regex.gss_property.match(text)
+	var key: String = regex_match.get_string(1)
+	var value: String = regex_match.get_string(2)
+	
+	return value if "stylebox" == key else default_value
+
+
 func _update_current_data() -> void:
 	var cursor_line: int = get_caret_line()
 	var lines: PackedStringArray = text.split("\n")
@@ -63,6 +72,7 @@ func _update_current_data() -> void:
 	current_indent = GSS.get_indentation_level(current_line)
 	current_theme_type = ""
 	current_style = ""
+	current_stylebox = ""
 	
 	# Step backwards from current line to determine current theme type & style being edited.
 	for i in range(cursor_line, -1, -1):
@@ -72,12 +82,26 @@ func _update_current_data() -> void:
 			match current_indent:
 				0: current_theme_type = line.trim_suffix(":")
 				1: current_style = line.trim_suffix(":")
+				2: current_stylebox = _parse_stylebox_value(line, current_stylebox)
 		
 		# When we find the current theme type, ensure current style is set and exit the `for` loop.
 		if current_theme_type:
 			if !current_style:
 				current_style = GSS.DEFAULT_STYLE
 			break
+	
+	# Step forward from the current line to determine the current flavor of StyleBox, if defined.
+	if 2 == current_indent and !current_stylebox:
+		for i in range(cursor_line, 1, 1):
+			var line = lines[i].strip_edges()
+			
+			if line and GSS.get_indentation_level(line) < 2:
+				break  # Stop when a property is defined at a lower indentation level.
+			
+			current_stylebox = _parse_stylebox_value(line, current_stylebox)
+	
+	if !current_stylebox:
+		current_stylebox = GSS.DEFAULT_STYLEBOX
 
 
 func _update_code_completion_options(
@@ -109,8 +133,16 @@ func _update_code_completion_options(
 
 
 func _update_stylebox_code_completion_options() -> void:
-	# TODO: Get key and value options for StyleBox properties, based on the type of StyleBox.
-	pass
+	var options: Array = GSS.get_stylebox_properties(current_stylebox)
+	
+	_update_code_completion_options(
+		options,
+		CodeEdit.KIND_MEMBER,
+		Color.POWDER_BLUE,
+		null,
+		null,
+		CodeEdit.CodeCompletionLocation.LOCATION_OTHER,
+	)
 
 
 func _update_theme_type_code_completion_options() -> void:
@@ -127,8 +159,6 @@ func _update_theme_type_code_completion_options() -> void:
 
 
 func _update_theme_style_code_completion_options() -> void:
-	# TODO: Handle code completion options when preceded by a `:` character (i.e. property values).
-	
 	var options: Array = GSS.get_theme_properties(current_style)
 	
 	_update_code_completion_options(

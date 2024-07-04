@@ -22,7 +22,7 @@ Button:
 	disabled:
 		# You can define colors using hex codes, with or without alpha values.
 		bg_color: #FF22CC  # This would also work: `bg_color: #F2C`.
-
+		
 		# These properties will override the `normal` style values for the Button theme type.
 		corner_radius_top_left: 0
 		corner_radius_bottom_right: 0

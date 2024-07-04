@@ -12,6 +12,9 @@ const DEFAULT_COLOR: Color = Color.WHITE
 ## Used when no theme type style (e.g. "disabled", "hover", "pressed") is specified.
 const DEFAULT_STYLE: String = "normal"
 
+## Used when no stylebox property is specified.
+const DEFAULT_STYLEBOX: String = "StyleBoxFlat"
+
 ## RegEx pattern for identifying Color constant values. Matches values like "RED" from "Color.RED",
 ## or just "red".
 const REGEX_COLOR_CONSTANT: String = r"(?:Color\.)?([\w]+)"
@@ -90,7 +93,7 @@ func dict_to_theme(dict: Dictionary) -> Theme:
 				continue
 			
 			# Instantiate a new StyleBox that can have properties applied to it.
-			var stylebox_type: String = props.get("stylebox", "StyleBoxFlat")
+			var stylebox_type: String = props.get("stylebox", DEFAULT_STYLEBOX)
 			var stylebox = ClassDB.instantiate(stylebox_type)
 			var stylebox_props: Dictionary = _get_stylebox_property_types(stylebox_type)
 			
@@ -170,8 +173,17 @@ func get_classes_with_theme_properties() -> Array[String]:
 
 
 ## Returns an array of all theme properties for the given class.
+func get_stylebox_properties(cls: String) -> Array:
+	var result: Array = ["stylebox"]
+	
+	result.append_array(_get_stylebox_property_types(cls).keys())
+	
+	return result
+
+
+## Returns an array of all theme properties for the given class.
 func get_theme_properties(cls: String) -> Array:
-	return _get_theme_property_types(cls).keys() if ClassDB.class_exists(cls) else []
+	return _get_theme_property_types(cls).keys()
 
 
 ## Returns `true` if the given class has a `theme` property.
@@ -257,7 +269,7 @@ func _get_property_group(props: Dictionary, key: String) -> Array:
 	return props.keys().filter(func(k): return k != key and k.begins_with(key))
 
 
-## Returns a dictionary of property names and their corresponding data types for the given StyleBox class.
+## Returns a dictionary of property names and their corresponding data types for the given class.
 func _get_stylebox_property_types(cls: String) -> Dictionary:
 	var no_inheritance: bool = true
 	var result: Dictionary = _get_class_property_types(cls, no_inheritance)

@@ -253,6 +253,57 @@ func theme_to_tres(theme: Theme, save_path: String) -> int:
 	return ResourceSaver.save(theme, save_path)
 
 
+## Validates GSS syntax, returning a dictionary with a boolean `valid` property and an `errors`
+## array that contains a list of errors found (if any).
+func validate_gss(content: String) -> Dictionary:
+	var result = {"valid": true, "errors": []}
+	var lines = content.split("\n")
+	var current_indent = 0
+	var current_theme_type = ""
+	var current_style = ""
+	var expect_nested = false
+	
+	for i in range(lines.size()):
+		var line = lines[i].strip_edges()
+		if line.is_empty() or line.begins_with("#"):
+			continue
+	
+		var indent = get_indentation_level(lines[i])
+	
+		if indent > current_indent + 1:
+			result.errors.append("Line %d: Invalid indentation" % (i + 1))
+		elif indent == 0:
+			if not line.ends_with(":"):
+				result.errors.append("Line %d: Theme type should end with ':'" % (i + 1))
+			current_theme_type = line.trim_suffix(":")
+			expect_nested = false
+		elif indent == 1:
+			if ":" not in line:
+				result.errors.append("Line %d: Style should contain ':'" % (i + 1))
+			else:
+				var parts = line.split(":", true, 1)
+				if parts.size() == 2:
+					current_style = parts[0].strip_edges()
+					if parts[1].strip_edges().is_empty():
+						expect_nested = true
+					else:
+						expect_nested = false
+				else:
+					result.errors.append("Line %d: Invalid style format" % (i + 1))
+		elif indent == 2:
+			if expect_nested:
+				if ":" not in line:
+					result.errors.append("Line %d: Nested property should contain ':'" % (i + 1))
+			else:
+				if ":" not in line:
+					result.errors.append("Line %d: Property should contain ':'" % (i + 1))
+		
+		current_indent = indent
+	
+	result.valid = result.errors.is_empty()
+	return result
+
+
 ## Returns a dictionary of property names and their corresponding data types for the given class.
 func _get_class_property_types(cls: Variant, no_inheritance: bool = false) -> Dictionary:
 	var result: Dictionary = {}

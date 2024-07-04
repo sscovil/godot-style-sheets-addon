@@ -216,9 +216,18 @@ func _write_file(path: String) -> void:
 	# Update file hash so new changes can be detected.
 	file_hashes[path] = all_files[path].hash()
 	
-	# Update the file system, so other modules can know that the file has changed.
-	file_system.update_file(path)
+	# Validate the GSS content
+	var validation_result: Dictionary = GSS.validate_gss(file_editor.text)
 	
-	# Queue the file up for re-importing.
-	if not path in pending_reimports:
-		pending_reimports.append(path)
+	if validation_result.valid:
+		# Update the file system, so other modules can know that the file has changed.
+		file_system.update_file(path)
+		
+		# Queue the file up for re-importing.
+		if not path in pending_reimports:
+			pending_reimports.append(path)
+	else:
+		# Display validation errors
+		push_warning("[GSS] Validation error in file: %s" % current_file)
+		for warning in validation_result.errors:
+			push_warning(warning)

@@ -138,11 +138,7 @@ func file_to_theme(source_path: String) -> Theme:
 
 
 ## Converts the contents of a GSS file to a Theme object and saves it to a resource file.
-func file_to_tres(
-	source_path: String,
-	save_path: String = "",
-	save_extension: String = "tres"
-) -> int:
+func file_to_tres(source_path: String, save_path: String = "") -> int:
 	var file: FileAccess = FileAccess.open(source_path, FileAccess.READ)
 	
 	if !file:
@@ -153,16 +149,15 @@ func file_to_tres(
 	file.close()
 	
 	if !save_path:
-		# Remove the ".gss" file extension from the source path.
-		save_path = source_path.trim_suffix(".gss")
-	else:
-		# Remove the file extension from the save path, if it exists.
-		save_path = save_path.trim_suffix(save_extension)
+		save_path = source_path
+	
+	# Remove the ".gss" file extension from the source path.
+	save_path.trim_suffix(source_path.get_extension()) + "tres"
 	
 	var dict: Dictionary = text_to_dict(text)
 	var theme: Theme = dict_to_theme(dict)
 	
-	return ResourceSaver.save(theme, "%s.%s" % [save_path, save_extension])
+	return ResourceSaver.save(theme, save_path)
 
 
 ## Returns an array of all class names that have theme properties.

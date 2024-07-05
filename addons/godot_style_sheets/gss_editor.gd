@@ -25,10 +25,11 @@ var save_timer: Timer
 
 @onready var file_menu: PopupMenu = $SplitContainer/FileListContainer/FileListMenuBar/File
 @onready var file_list: ItemList = $SplitContainer/FileListContainer/ScrollContainer/FileList
-@onready var file_editor: CodeEdit = $SplitContainer/FileEditorContainer/FileEditor
+@onready var file_editor: GSSCodeEdit = $SplitContainer/FileEditorContainer/FileEditor
 @onready var file_rename: LineEdit = $SplitContainer/FileListContainer/ScrollContainer/FileList/RenameFile
 
 
+## Called when all child nodes are ready.
 func _ready() -> void:
 	# Add FileDialog window for GSS files.
 	gss_file_dialog = _new_file_dialog_node("*.gss ; GSS Files")
@@ -68,10 +69,17 @@ func _ready() -> void:
 	file_rename.set_visible(false)
 	file_rename.text_change_rejected.connect(_on_file_rename_text_change_rejected)
 	file_rename.text_submitted.connect(_on_file_rename_text_submitted)
-	file_rename.focus_exited.connect(_on_file_rename_focus_lost)
+	file_rename.focus_exited.connect(_on_file_rename_focus_exited)
 	
 	# Find all GSS files in the project and add them to the file list sidebar.
 	_populate_file_list()
+
+
+## Handles input events.
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ENTER:
+			_on_enter_key_input()
 
 
 ## Clears the contents and current state of the GSS file editor.
@@ -114,6 +122,14 @@ func _new_file_dialog_node(filter: String) -> FileDialog:
 	return file_dialog
 
 
+## Handles enter key inputs.
+func _on_enter_key_input() -> void:
+	# Open file rename field if the file list has focus and the field is not visible.
+	if file_list.has_focus() and !file_rename.is_visible():
+		_rename_file.call_deferred(current_file)
+		get_viewport().set_input_as_handled()  # Prevent the scene tree dock from grabbing focus.
+
+
 ## Handles file editor text changes.
 func _on_file_editor_text_changed() -> void:
 	if !current_file:
@@ -150,15 +166,20 @@ func _on_file_menu_id_pressed(id: int) -> void:
 		4: _export()
 
 
+## Handles when the user hits the escape key while renaming a file (does not rename the file).
 func _on_file_rename_text_change_rejected(rejected_substring: String) -> void:
 	_on_file_renamed(current_file.get_file())
 
 
+## Handles when the user hits the enter or tab key while renaming a file (renames the file).
 func _on_file_rename_text_submitted(new_text: String) -> void:
 	_on_file_renamed(new_text)
 
 
-func _on_file_rename_focus_lost() -> void:
+## Handles when the user clicks elsewhere while renaming a file (renames the file).
+func _on_file_rename_focus_exited() -> void:
+	# The `focus_exited` signal is emitted after `text_submitted` when the user hits the tab key,
+	# so check first if the rename field is still visible. If not, it's already been handled.
 	if file_rename.is_visible():
 		_on_file_renamed(file_rename.get_text())
 
@@ -168,8 +189,10 @@ func _on_file_renamed(new_name: String) -> void:
 	file_rename.set_visible(false)
 	
 	var old_name: String = current_file.get_file()
+	var current_file_list_index: int = file_list.get_selected_items()[0]
 	
 	if new_name == old_name:
+		file_list.select(current_file_list_index)
 		return
 	
 	var base_dir: String = current_file.get_base_dir()
@@ -178,6 +201,7 @@ func _on_file_renamed(new_name: String) -> void:
 	
 	if FileAccess.file_exists(new_path):
 		push_warning("[GSS] Unable to rename file because file already exists: %s" % new_path)
+		file_list.select(current_file_list_index)
 		return
 	
 	var dir: DirAccess = DirAccess.open(base_dir)
@@ -205,7 +229,7 @@ func _on_file_renamed(new_name: String) -> void:
 	if not new_path in pending_reimports:
 		pending_reimports.append(new_path)
 	
-	_update_file_list(file_list.get_selected_items()[0])
+	_update_file_list(current_file_list_index)
 
 
 ## Handles GSS file dialog when file is selected.
@@ -275,6 +299,9 @@ func _read_file(path: String) -> void:
 
 ## Enables the user to rename a given file in place, in the file list.
 func _rename_file(path: String) -> void:
+	if !path or !FileAccess.file_exists(path):
+		return
+	
 	var index: int = file_list.get_selected_items()[0]
 	var file_name: String = file_list.get_item_text(index)
 	var file_list_global_pos: Vector2 = file_list.get_global_position()
@@ -284,8 +311,10 @@ func _rename_file(path: String) -> void:
 	file_rename.set_visible(true)
 	file_rename.set_global_position(file_list_global_pos + file_list_item_pos)
 	file_rename.set_size(file_list.get_item_rect(index).size)
+	
+	#await get_tree().process_frame
 	file_rename.grab_focus()
-	file_rename.select(0, file_name.length() - 4)  # Select file name, not file extension.
+	file_rename.select(0, file_name.length() - ".gss".length())
 
 
 ## Saves the current file, if it has been changed (based on file hash).

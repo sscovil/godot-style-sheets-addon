@@ -29,6 +29,7 @@ layout_mode = 2
 [node name="FileListMenuBar" type="MenuBar" parent="SplitContainer/FileListContainer"]
 custom_minimum_size = Vector2(2.08165e-12, 30)
 layout_mode = 2
+focus_next = NodePath("../ScrollContainer/FileList")
 flat = true
 prefer_global_menu = false
 
@@ -59,6 +60,10 @@ size_flags_vertical = 3
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../../FileListMenuBar")
+focus_neighbor_right = NodePath("../../../FileEditorContainer/FileEditor")
+focus_next = NodePath("../../../FileEditorContainer/FileEditor")
+focus_previous = NodePath("../../FileListMenuBar")
 allow_reselect = true
 item_count = 2
 item_0/text = "test_stylesheet.gss"
@@ -79,6 +84,8 @@ size_flags_horizontal = 3
 [node name="FileEditor" type="CodeEdit" parent="SplitContainer/FileEditorContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+focus_neighbor_left = NodePath("../../FileListContainer/ScrollContainer/FileList")
+focus_previous = NodePath("../../FileListContainer/ScrollContainer/FileList")
 text = "## This is a Godot style sheet!
 
 # This is the style definition for a Button theme type.

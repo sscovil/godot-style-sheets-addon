@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://addons/godot_style_sheets/gss_syntax_highlighter.gd" id="2_c2wjg"]
 [ext_resource type="Script" path="res://addons/godot_style_sheets/gss_code_edit.gd" id="3_8vnvk"]
 
-[sub_resource type="SyntaxHighlighter" id="SyntaxHighlighter_deiyl"]
+[sub_resource type="SyntaxHighlighter" id="SyntaxHighlighter_k4omq"]
 script = ExtResource("2_c2wjg")
 
 [node name="GSSEditor" type="VBoxContainer"]
@@ -36,7 +36,7 @@ prefer_global_menu = false
 title = "File"
 size = Vector2i(136, 100)
 allow_search = false
-item_count = 5
+item_count = 7
 item_0/text = "New GSS File..."
 item_1/id = 5
 item_1/separator = true
@@ -46,6 +46,10 @@ item_3/text = "Save File"
 item_3/id = 2
 item_4/text = "Save File As..."
 item_4/id = 3
+item_5/id = 5
+item_5/separator = true
+item_6/text = "Export..."
+item_6/id = 6
 
 [node name="ScrollContainer" type="ScrollContainer" parent="SplitContainer/FileListContainer"]
 layout_mode = 2
@@ -55,9 +59,18 @@ size_flags_vertical = 3
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+allow_reselect = true
 item_count = 2
 item_0/text = "test_stylesheet.gss"
 item_1/text = "test_stylesheet_copy.gss"
+
+[node name="RenameFile" type="LineEdit" parent="SplitContainer/FileListContainer/ScrollContainer/FileList"]
+visible = false
+layout_mode = 2
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 71.0625
+offset_bottom = 35.0
 
 [node name="FileEditorContainer" type="VBoxContainer" parent="SplitContainer"]
 layout_mode = 2
@@ -100,14 +113,13 @@ Button:
 	hover:
 		# You can define colors using Godot's Color constants.
 		bg_color: Color.RED
-	
 
 	# This is the style definition for a Button theme type when it is pressed.
 	pressed:
 		# You can define colors using case-insensitive color names that are in Godot's Color constants.
 		bg_color: blue  # This is the same as `font_color: Color.BLUE`.
 "
-syntax_highlighter = SubResource("SyntaxHighlighter_deiyl")
+syntax_highlighter = SubResource("SyntaxHighlighter_k4omq")
 gutters_draw_line_numbers = true
 delimiter_comments = Array[String](["##", "#"])
 code_completion_enabled = true

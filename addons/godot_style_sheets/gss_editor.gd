@@ -93,6 +93,7 @@ func _clear_editor_state() -> void:
 func _export() -> void:
 	tres_file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
 	tres_file_dialog.popup_centered(FILE_DIALOG_POPUP_SIZE)
+	tres_file_dialog.set_current_path("%s.tres" % current_file.trim_suffix(".gss"))
 
 
 ## Loads a GSS file in the editor.
@@ -244,9 +245,8 @@ func _on_gss_file_selected(path: String) -> void:
 func _on_tres_file_selected(path: String) -> void:
 	if gss_file_dialog.file_mode == FileDialog.FILE_MODE_OPEN_FILE:
 		push_warning("Importing theme files as GSS is not yet possible.")
-		pass
 	elif gss_file_dialog.file_mode == FileDialog.FILE_MODE_SAVE_FILE:
-		GSS.file_to_tres(current_file)
+		GSS.file_to_tres(current_file, path)
 
 
 ## Finds all GSS files in the project and adds them to the file list sidebar.

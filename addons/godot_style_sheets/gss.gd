@@ -29,6 +29,14 @@ const REGEX_COLOR_RGBA: String = r"Color\(([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)
 ## colors).
 const REGEX_COMMENT: String = r"(?m)(^[ \t]*#+(?!([a-fA-F0-9]{3}|[a-fA-F0-9]{4}|[a-fA-F0-9]{6}|[a-fA-F0-9]{8})\b).*$|[ \t]*#+(?!([a-fA-F0-9]{3}|[a-fA-F0-9]{4}|[a-fA-F0-9]{6}|[a-fA-F0-9]{8})\b).*$)"
 
+## RegEx pattern for identifying the `type`, `path`, and `id` values of an external resource in a
+## `.tres` file. Matches values like "FontFile", "res://font.ttf", and "1_touhl" from
+## '[ext_resource type="FontFile" uid="uid://crfeeuddpgih3" path="res://font.ttf" id="1_touhl"]'.
+const REGEX_EXT_RESOURCE: String = r'^\[ext_resource .*?type="([^"]+)".*?path="([^"]+)".*?id="([^"]+)"'
+
+## RegEx pattern for capturing the type of a resource in a `.tres` file.
+const REGEX_GD_RESOURCE: String = r'^[gd_resource [.]* type="(\w+)"'
+
 ## RegEx pattern for identifying GSS property key/value pairs in a GSS file. Matches values like
 ## "font" and "res://font.tres" from 'font: "res://font.tres"'; or "color" and "Color.RED" from
 ## "color: Color.RED;". Ignores trailing semicolons.
@@ -38,9 +46,25 @@ const REGEX_GSS_PROPERTY: String = r"(\w+)\s*:\s*(?:\"?([^\";\n]+)\"?;?|([^;\n]+
 ## from "0.5px".
 const REGEX_PIXEL_SIZE: String = r"^\d+(\.\d+)?px$"
 
+## RegEX pattern that captures quoted text inside parentheses. Matches values like `1_touhl` from
+## 'ExtResource("1_touhl")', and `StyleBoxFlat_4r6p2` from 'SubResource("StyleBoxFlat_4r6p2")'.
+const REGEX_QUOTED_IN_PARENS: String = r'\("([A-Za-z0-9_]+)"\)'
+
+## RegEx pattern for matching the theme type, property type, property name, and value in a resource
+## file. Matches values like "Button/font_sizes/font_size = 20", with "Button" as the first capture
+## string, "font_sizes" as the second, "font_size" as the third, and "20" as the fourth. This will
+## Also match a single key/valye pair, like "bg_color" and "Color(0, 0, 0, 0.4)" from the text
+## "bg_color = Color(0, 0, 0, 0.4)".
+const REGEX_RESOURCE: String = r'(\w+)/?(\w+)?/?(\w+)? = (.*)'
+
 ## RegEx pattern for matching snake case strings. Matches "foo_bar", but not "Foo", "Bar", "FooBar",
 ## or "Foo Bar".
 const REGEX_SNAKE_CASE: String = r"^([a-z0-9_]+)$"
+
+## RegEx pattern for matching the StyleBox type and ID in a resource file. Matches values like
+## '[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4r6p2"]', with "StyleBoxFlat" as the first
+## capture string and "StyleBoxFlat_4r6p2" as the second.
+const REGEX_SUB_RESOURCE: String = r'^\[sub_resource .*?type="([^"]+)".*?id="([^"]+)"'
 
 ## RegEx pattern for identifying theme override properties. Matches values like "colors" and
 ## "font_color" from "theme_override_colors/font_color"; or "fonts" and "font" from
@@ -63,9 +87,14 @@ var regex: Dictionary = {
 	"color_hex": RegEx.create_from_string(REGEX_COLOR_HEX),
 	"color_rgba": RegEx.create_from_string(REGEX_COLOR_RGBA),
 	"comment": RegEx.create_from_string(REGEX_COMMENT),
+	"gd_resource": RegEx.create_from_string(REGEX_GD_RESOURCE),
+	"ext_resource": RegEx.create_from_string(REGEX_EXT_RESOURCE),
 	"gss_property": RegEx.create_from_string(REGEX_GSS_PROPERTY),
 	"pixel_size": RegEx.create_from_string(REGEX_PIXEL_SIZE),
+	"quoted_in_parens": RegEx.create_from_string(REGEX_QUOTED_IN_PARENS),
+	"resource": RegEx.create_from_string(REGEX_RESOURCE),
 	"snake_case": RegEx.create_from_string(REGEX_SNAKE_CASE),
+	"sub_resource": RegEx.create_from_string(REGEX_SUB_RESOURCE),
 	"theme_override": RegEx.create_from_string(REGEX_THEME_OVERRIDE),
 	"vector2": RegEx.create_from_string(REGEX_VECTOR2),
 }
@@ -139,23 +168,16 @@ func file_to_theme(source_path: String) -> Theme:
 
 ## Converts the contents of a GSS file to a Theme object and saves it to a resource file.
 func file_to_tres(source_path: String, save_path: String = "") -> int:
-	var file: FileAccess = FileAccess.open(source_path, FileAccess.READ)
+	var source_file_content: String = _read_file(source_path)
+	if source_file_content == null:
+		return FileAccess.get_open_error()
 	
-	if !file:
-		push_error("[GSS] Unable to open file: %s" % source_path)
-		return ERR_FILE_CANT_READ
-	
-	var text: String = file.get_as_text()
-	file.close()
+	var dict: Dictionary = text_to_dict(source_file_content)
+	var theme: Theme = dict_to_theme(dict)
 	
 	if !save_path:
 		save_path = source_path
-	
-	# Remove the ".gss" file extension from the source path.
-	save_path.trim_suffix(source_path.get_extension()) + "tres"
-	
-	var dict: Dictionary = text_to_dict(text)
-	var theme: Theme = dict_to_theme(dict)
+	save_path = _replace_file_extension(save_path, "tres")
 	
 	return ResourceSaver.save(theme, save_path)
 
@@ -215,6 +237,21 @@ func has_theme_properties(cls: String) -> bool:
 	return false
 
 
+## Imports a Theme from a `.tres` resource file, parses it to GSS, and saves it as a `.gss` file.
+func import_from_tres(import_path: String, save_path: String = "") -> int:
+	var import_file_content: String = _read_file(import_path)
+	if import_file_content == null:
+		return FileAccess.get_open_error()
+	
+	var gss: String = tres_to_gss(import_file_content)
+	
+	if !save_path:
+		save_path = import_path
+	save_path = _replace_file_extension(save_path, "gss")
+	
+	return _save_file(save_path, gss)
+
+
 ## Strips comments from the given text.
 func strip_comments(text: String) -> String:
 	return regex.comment.sub(text, '', true)
@@ -246,6 +283,120 @@ func text_to_dict(raw_text: String) -> Dictionary:
 ## Saves a Theme object to a resource file, returning OK or ERR_FILE_CANT_WRITE.
 func theme_to_tres(theme: Theme, save_path: String) -> int:
 	return ResourceSaver.save(theme, save_path)
+
+
+## Parses the contents of a theme's `.tres` resource file and returns the equivalent GSS as text.
+## Returns null if `tres_file_content` is not the file contents of a Theme resource.
+func tres_to_gss(tres_file_content: String) -> String:
+	var lines: PackedStringArray = tres_file_content.split("\n")
+	var first_line: String = lines[0].strip_edges()
+	var gss_output: String
+	
+	if !regex.get("gd_resource").search(first_line):
+		push_warning("[GSS] Invalid Theme resource file content: %s" % first_line)
+		return gss_output
+	
+	var ext_resources: Dictionary = {}
+	var sub_resources: Dictionary = {}
+	
+	var current_class: String = ""
+	var current_property_type: String = ""
+	var current_stylebox: String = ""
+	var current_stylebox_id: String = ""
+	
+	gss_output = ""
+	
+	for line in lines:
+		var text: String = line.strip_edges()
+		var _match: RegExMatch
+		
+		if line.is_empty() or line == first_line:
+			current_class = ""
+			current_property_type = ""
+			current_stylebox = ""
+			current_stylebox_id = ""
+			continue
+		
+		# Parse external resource definition (e.g. fonts, icons).
+		_match = regex.get("ext_resource").search(text)
+		if _match:
+			var path: String = _match.get_string(2)
+			var id: String = _match.get_string(3)
+			ext_resources[id] = path
+			continue
+		
+		# Parse StyleBox sub-resource definition (e.g. StyleBoxFlat, StyleBoxTexture).
+		_match = regex.get("sub_resource").search(text)
+		if _match:
+			current_stylebox = _match.get_string(1)
+			current_stylebox_id = _match.get_string(2)
+			sub_resources[current_stylebox_id] = {"stylebox": current_stylebox}
+			continue
+		
+		# Parse properties of a sub-resource.
+		_match = regex.get("resource").search(text)
+		if _match and !current_stylebox_id.is_empty():
+			var key: String = _match.get_string(1)
+			var value: String = _match.get_string(4)
+			if value.begins_with("ExtResource"):
+				value = _get_ext_resource_reference(ext_resources, value)
+			sub_resources[current_stylebox_id][key] = value
+			continue
+		
+		# Parse properties of a resource.
+		elif _match:
+			var cls: String = _match.get_string(1)
+			var type: String = _match.get_string(2)
+			var key: String = _match.get_string(3)
+			var value: String = _match.get_string(4)
+			
+			if current_class.is_empty():
+				# Add a blank line before each new theme type, after the first.
+				if !gss_output.is_empty():
+					gss_output += "\n"
+				# Set the current theme type and add it to the GSS output.
+				current_class = cls
+				gss_output += "%s:\n" % current_class
+			
+			if current_property_type.is_empty():
+				# Set the current property type and add a comment indicating the type.
+				current_property_type = type
+				gss_output += "\t# %s\n" % type
+			elif current_property_type != type:
+				# Set the current property type and add a comment indicating the type, with a
+				# line break before it.
+				current_property_type = type
+				gss_output += "\t\n\t# %s\n" % type
+			
+			# If value is SubResource reference, parse the GSS for the appropriate StyleBox.
+			if value.begins_with("SubResource"):
+				var stylebox: Dictionary = _get_sub_resource_reference(sub_resources, value)
+				# Add the style (e.g. normal, hover, focus) to the GSS output.
+				gss_output += "\t\n\t%s:\n" % key
+				# Loop through the StyleBox properties, adding each to the GSS output.
+				for stylebox_key: String in stylebox.keys():
+					var stylebox_value: String = stylebox[stylebox_key]
+					gss_output += "\t\t%s: %s\n" % [stylebox_key, stylebox_value]
+				continue
+				
+			# If value is ExtResource reference, set value to the external resource path.
+			if value.begins_with("ExtResource"):
+				value = _get_ext_resource_reference(ext_resources, value)
+			
+			# Add the current key/value pair to the GSS output.
+			gss_output += "\t%s: %s\n" % [key, value]
+	
+	return gss_output
+
+
+func _get_ext_resource_reference(resources: Dictionary, value: String) -> String:
+	var _match: RegExMatch = regex.get("quoted_in_parens").search(value)
+	return resources.get(_match.get_string(1), value) if _match else value
+
+
+func _get_sub_resource_reference(resources: Dictionary, value: String) -> Dictionary:
+	var _match: RegExMatch = regex.get("quoted_in_parens").search(value)
+	return resources.get(_match.get_string(1), {}) if _match else {}
 
 
 ## Validates GSS syntax, returning a dictionary with a boolean `valid` property and an `errors`
@@ -526,6 +677,42 @@ func _parse_vector2(text: String) -> Vector2:
 	var y: int = _match.get_string(2) as int
 	
 	return Vector2(x, y)
+
+
+## Returns the content of a given file path, or null there is an error reading the file. Use
+## `FileAccess.get_open_error()` immediately after calling this function if it returns null, to
+## get the error code. 
+func _read_file(path: String) -> String:
+	var content: String
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	
+	if !file:
+		push_error("[GSS] Unable to open file: %s" % path)
+		return content
+	
+	content = file.get_as_text()
+	file.close()
+	
+	return content
+
+
+## String utility to replace an existing file extension with a new one, for a given file path.
+func _replace_file_extension(path: String, new_extension) -> String:
+	return path.trim_suffix(path.get_extension()) + new_extension
+
+
+## Saves the given content to the given file path, returning `OK` or an error status code.
+func _save_file(path: String, content: String) -> int:
+	if FileAccess.file_exists(path):
+		push_warning("[GSS] Unable to save file because file already exists: %s" % path)
+		return ERR_FILE_ALREADY_IN_USE
+	
+	var file = FileAccess.open("user://save_game.dat", FileAccess.WRITE)
+	
+	file.store_string(content)
+	file.close()
+	
+	return OK
 
 
 ## Sets a property on the given StyleBox. If the property is not found in the `stylebox_props` dictionary,

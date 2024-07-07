@@ -66,6 +66,7 @@ func _ready() -> void:
 	
 	# Set up inline file renaming in the GSS file list.
 	file_list.set_allow_reselect(true)  # Needed to detect click on currently selected file.
+	file_list.item_activated.connect(_on_file_list_item_activated)
 	file_rename.set_visible(false)
 	file_rename.text_change_rejected.connect(_on_file_rename_text_change_rejected)
 	file_rename.text_submitted.connect(_on_file_rename_text_submitted)
@@ -73,13 +74,6 @@ func _ready() -> void:
 	
 	# Find all GSS files in the project and add them to the file list sidebar.
 	_populate_file_list()
-
-
-## Handles input events.
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_ENTER:
-			_on_enter_key_input()
 
 
 ## Clears the contents and current state of the GSS file editor.
@@ -124,11 +118,9 @@ func _new_file_dialog_node(filter: String) -> FileDialog:
 
 
 ## Handles enter key inputs.
-func _on_enter_key_input() -> void:
-	# Open file rename field if the file list has focus and the field is not visible.
-	if file_list.has_focus() and !file_rename.is_visible():
-		_rename_file.call_deferred(current_file)
-		get_viewport().set_input_as_handled()  # Prevent the scene tree dock from grabbing focus.
+func _on_file_list_item_activated(index: int) -> void:
+	_rename_file.call_deferred(file_list.get_item_metadata(index))
+	get_viewport().set_input_as_handled()  # Prevent the scene tree dock from grabbing focus.
 
 
 ## Handles file editor text changes.

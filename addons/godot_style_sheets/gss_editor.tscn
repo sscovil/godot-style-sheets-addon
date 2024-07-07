@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://addons/godot_style_sheets/gss_syntax_highlighter.gd" id="2_c2wjg"]
 [ext_resource type="Script" path="res://addons/godot_style_sheets/gss_code_edit.gd" id="3_8vnvk"]
 
-[sub_resource type="SyntaxHighlighter" id="SyntaxHighlighter_k4omq"]
+[sub_resource type="SyntaxHighlighter" id="SyntaxHighlighter_sogb1"]
 script = ExtResource("2_c2wjg")
 
 [node name="GSSEditor" type="VBoxContainer"]
@@ -122,7 +122,7 @@ Button:
 		# You can define colors using case-insensitive color names that are in Godot's Color constants.
 		bg_color: blue  # This is the same as `font_color: Color.BLUE`.
 "
-syntax_highlighter = SubResource("SyntaxHighlighter_k4omq")
+syntax_highlighter = SubResource("SyntaxHighlighter_sogb1")
 gutters_draw_line_numbers = true
 delimiter_comments = Array[String](["##", "#"])
 code_completion_enabled = true

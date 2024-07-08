@@ -430,19 +430,26 @@ func validate_gss(content: String) -> Dictionary:
 				var parts = line.split(":", true, 1)
 				if parts.size() == 2:
 					current_style = parts[0].strip_edges()
-					if parts[1].strip_edges().is_empty():
+					var value: String = parts[1].strip_edges()
+					if value.is_empty():
 						expect_nested = true
 					else:
 						expect_nested = false
+					if _has_unclosed_quotes(value):
+						result.errors.append("Line %d: Unclosed quotes" % (i + 1))
 				else:
 					result.errors.append("Line %d: Invalid style format" % (i + 1))
 		elif indent == 2:
 			if expect_nested:
 				if ":" not in line:
-					result.errors.append("Line %d: Nested property should contain ':'" % (i + 1))
+					result.errors.append("Line %d: StyleBox property should contain ':'" % (i + 1))
+				else:
+					var value: String = line.get_slice(":", 1).strip_edges()
+					if _has_unclosed_quotes(value):
+						result.errors.append("Line %d: Unclosed quotes" % (i + 1))
 			else:
 				if ":" not in line:
-					result.errors.append("Line %d: Property should contain ':'" % (i + 1))
+					result.errors.append("Line %d: Unexpected StyleBox property" % (i + 1))
 		
 		current_indent = indent
 	
@@ -519,6 +526,19 @@ func _get_theme_property_types(theme_type: String) -> Dictionary:
 		result[key] = value
 	
 	return result
+
+
+## Returns `true` if the given text begins with a quotation mark, but does not end with one.
+func _has_unclosed_quotes(text: String) -> bool:
+	text = text.strip_edges()
+	
+	if text.length() == 1:
+		return text in ["'", '"']
+	
+	var has_unclosed_single_quotes: bool = text.begins_with("'") and !text.ends_with("'")
+	var has_unclosed_double_quotes: bool = text.begins_with('"') and !text.ends_with('"')
+	
+	return has_unclosed_single_quotes or has_unclosed_double_quotes
 
 
 ## Returns `true` if the given style is a valid StyleBox property.

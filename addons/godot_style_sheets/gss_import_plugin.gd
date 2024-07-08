@@ -62,7 +62,7 @@ func _import(
 	platform_variants: Array[String],
 	gen_files: Array[String],
 ) -> int:
-	var result: int = GSS.file_to_tres(source_file, save_path, _get_save_extension())
+	var result: int = GSS.file_to_tres(source_file, save_path)
 	
 	gen_files.append_array(GSS.fonts)
 	gen_files.append_array(GSS.icons)

@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://addons/godot_style_sheets/gss_syntax_highlighter.gd" id="2_c2wjg"]
 [ext_resource type="Script" path="res://addons/godot_style_sheets/gss_code_edit.gd" id="3_8vnvk"]
 
-[sub_resource type="SyntaxHighlighter" id="SyntaxHighlighter_sogb1"]
+[sub_resource type="SyntaxHighlighter" id="SyntaxHighlighter_qxr15"]
 script = ExtResource("2_c2wjg")
 
 [node name="GSSEditor" type="VBoxContainer"]
@@ -37,16 +37,22 @@ prefer_global_menu = false
 title = "File"
 size = Vector2i(136, 100)
 allow_search = false
-item_count = 5
+item_count = 8
 item_0/text = "New GSS File..."
 item_1/text = "Load GSS File..."
 item_1/id = 1
-item_2/text = "Save File"
-item_2/id = 2
-item_3/text = "Save File As..."
-item_3/id = 3
-item_4/text = "Export..."
-item_4/id = 4
+item_2/id = 100
+item_2/separator = true
+item_3/text = "Save File"
+item_3/id = 2
+item_4/text = "Save File As..."
+item_4/id = 3
+item_5/id = 101
+item_5/separator = true
+item_6/text = "Export GSS to Theme File..."
+item_6/id = 4
+item_7/text = "Import Theme to GSS File..."
+item_7/id = 5
 
 [node name="ScrollContainer" type="ScrollContainer" parent="SplitContainer/FileListContainer"]
 layout_mode = 2
@@ -82,7 +88,7 @@ layout_mode = 2
 size_flags_vertical = 3
 focus_neighbor_left = NodePath("../../FileListContainer/ScrollContainer/FileList")
 focus_previous = NodePath("../../FileListContainer/ScrollContainer/FileList")
-text = "## This is a Godot style sheet!
+text = "## This is a COPY of a Godot style sheet!
 
 # This is the style definition for a Button theme type.
 Button:
@@ -116,13 +122,14 @@ Button:
 	hover:
 		# You can define colors using Godot's Color constants.
 		bg_color: Color.RED
+	
 
 	# This is the style definition for a Button theme type when it is pressed.
 	pressed:
 		# You can define colors using case-insensitive color names that are in Godot's Color constants.
-		bg_color: blue  # This is the same as `font_color: Color.BLUE`.
+		bg_color: purple  # This is the same as `font_color: Color.BLUE`.
 "
-syntax_highlighter = SubResource("SyntaxHighlighter_sogb1")
+syntax_highlighter = SubResource("SyntaxHighlighter_qxr15")
 gutters_draw_line_numbers = true
 delimiter_comments = Array[String](["##", "#"])
 code_completion_enabled = true

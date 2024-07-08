@@ -8,19 +8,13 @@ const AUTO_SAVE_DELAY: float = 2.0
 ## Size of the file dialong window, when loading, saving, importing, or exporting a file.
 const FILE_DIALOG_POPUP_SIZE := Vector2(800, 600)
 
-## Seconds to wait before handling pending reimports.
-const REIMPORT_POLL_INTERVAL: float = 1.0
-
 var all_files: Dictionary = {}
 var current_file: String = ""
 var tres_file_dialog: FileDialog
 var gss_file_dialog: FileDialog
 var file_hashes: Dictionary = {}
 var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
-var is_reimporting: bool = false
 var last_modified_times: Dictionary = {}
-var pending_reimports: Array[String] = []
-var reimport_timer: Timer
 var save_timer: Timer
 
 @onready var file_menu: PopupMenu = $SplitContainer/FileListContainer/FileListMenuBar/File
@@ -46,14 +40,6 @@ func _ready() -> void:
 	save_timer.one_shot = true
 	save_timer.timeout.connect(_save_current_file)
 	add_child(save_timer)
-	
-	# Add timer for handling pending GSS file reimports.
-	reimport_timer = Timer.new()
-	reimport_timer.autostart = true
-	reimport_timer.one_shot = false
-	reimport_timer.timeout.connect(_process_pending_reimports)
-	reimport_timer.wait_time = REIMPORT_POLL_INTERVAL
-	add_child(reimport_timer)
 	
 	# Handle file editor text changes.
 	file_editor.text_changed.connect(_on_file_editor_text_changed)
@@ -88,6 +74,11 @@ func _export() -> void:
 	tres_file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
 	tres_file_dialog.popup_centered(FILE_DIALOG_POPUP_SIZE)
 	tres_file_dialog.set_current_path(current_file.trim_suffix(".gss"))
+
+
+func _import() -> void:
+	tres_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	tres_file_dialog.popup_centered(FILE_DIALOG_POPUP_SIZE)
 
 
 ## Loads a GSS file in the editor.
@@ -157,6 +148,7 @@ func _on_file_menu_id_pressed(id: int) -> void:
 		2: _save_file()
 		3: _save_file_as()
 		4: _export()
+		5: _import()
 
 
 ## Handles when the user hits the escape key while renaming a file (does not rename the file).
@@ -199,11 +191,6 @@ func _on_file_renamed(new_name: String) -> void:
 	
 	var dir: DirAccess = DirAccess.open(base_dir)
 	
-	# Remove the old import file if it exists.
-	var old_import: String = "%s.import" % old_name
-	if dir.file_exists(old_import):
-		dir.remove(old_import)
-	
 	# Rename the file.
 	dir.rename(old_path, new_path)
 	
@@ -214,13 +201,9 @@ func _on_file_renamed(new_name: String) -> void:
 	file_hashes.erase(old_path)
 	current_file = new_path
 	
-	# Tell Godot's internal file system object about the changes (required for reimport).
+	# Update the file system, so other modules can know that the file has changed.
 	file_system.update_file(old_path)
 	file_system.update_file(new_path)
-	
-	# Queue file for reimport with new name.
-	if not new_path in pending_reimports:
-		pending_reimports.append(new_path)
 	
 	_update_file_list(current_file_list_index)
 
@@ -236,36 +219,18 @@ func _on_gss_file_selected(path: String) -> void:
 ## Handles Theme file dialog when file is selected.
 func _on_tres_file_selected(path: String) -> void:
 	if tres_file_dialog.file_mode == FileDialog.FILE_MODE_OPEN_FILE:
-		push_warning("Importing theme files as GSS is not yet possible.")
+		GSS.tres_to_gss(path)
+		# Read the file, so it will appear in the GSS file list and open in the GSS file editor.
+		_read_file(path)
 	elif tres_file_dialog.file_mode == FileDialog.FILE_MODE_SAVE_FILE:
 		GSS.file_to_tres(current_file, path)
+		# Update the file system, so other modules can know that the file has changed.
+		file_system.update_file(path)
 
 
 ## Finds all GSS files in the project and adds them to the file list sidebar.
 func _populate_file_list() -> void:
 	_scan_directory("res://", "gss")
-
-
-## Reimports an GSS files that were queued to be reimported.
-func _process_pending_reimports() -> void:
-	if is_reimporting or pending_reimports.is_empty():
-		return
-	
-	is_reimporting = true
-	
-	# Create an array filtered to only include files that still exist.
-	var to_reimport = pending_reimports.filter(func(path): return FileAccess.file_exists(path))
-	pending_reimports.clear()
-	
-	
-	# Notify file editor when resources are reloaded.
-	if !file_system.resources_reimported.is_connected(file_editor._on_resources_reimported):
-		file_system.resources_reimported.connect(file_editor._on_resources_reimported)
-	
-	print("[GSS] Reimporting files: ", to_reimport)
-	file_system.reimport_files(to_reimport)
-	
-	is_reimporting = false
 
 
 ## Reads the file at the given path and stores its contents as `current_file`. Also adds it to the
@@ -404,10 +369,6 @@ func _write_file(path: String) -> void:
 	if validation_result.valid:
 		# Update the file system, so other modules can know that the file has changed.
 		file_system.update_file(path)
-		
-		# Queue the file up for re-importing.
-		if not path in pending_reimports:
-			pending_reimports.append(path)
 	else:
 		# Display validation errors
 		push_warning("[GSS] Validation error in file: %s" % current_file)

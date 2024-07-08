@@ -21,7 +21,7 @@ Button:
 	disabled:
 		# You can define colors using hex codes, with or without alpha values.
 		bg_color: #FF22CC  # This would also work: `bg_color: #F2C`.
-		
+
 		# These properties will override the `normal` style values for the Button theme type.
 		corner_radius_top_left: 0
 		corner_radius_bottom_right: 0
@@ -32,8 +32,9 @@ Button:
 	hover:
 		# You can define colors using Godot's Color constants.
 		bg_color: Color.RED
+	
 
 	# This is the style definition for a Button theme type when it is pressed.
 	pressed:
 		# You can define colors using case-insensitive color names that are in Godot's Color constants.
-		bg_color: blue  # This is the same as `font_color: Color.BLUE`.
+		bg_color: blue  # This is the same as `font_color: Color.YELLOW`.

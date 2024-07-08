@@ -28,18 +28,61 @@ func clear_state() -> void:
 	_current_stylebox = ""
 
 
-func _add_code_completion_options(options: Array, kind: int, color: Color, location: int) -> void:
-	set_code_completion_prefixes(options)
+func _add_code_completion_options(
+	options: Array,
+	kind: int,
+	color: Color,
+	location: int,
+	insert_text_template: String = "%s:",
+) -> void:
 	for option in options:
 		add_code_completion_option(
 			kind,
 			option,
-			"%s:" % option,
+			insert_text_template % option,
 			color,
 			null,
 			null,
 			location
 		)
+
+
+func _add_stylebox_code_completion_options() -> void:
+	var options = GSS.get_stylebox_properties(GSS.DEFAULT_STYLEBOX)
+	set_code_completion_prefixes(options)
+	_add_code_completion_options(
+		options,
+		CodeEdit.KIND_MEMBER,
+		GSSSyntaxHighlighter.STYLEBOX_PROPERTY_COLOR,
+		CodeEdit.CodeCompletionLocation.LOCATION_OTHER
+	)
+
+func _add_theme_type_code_completion_options() -> void:
+	var options = GSS.get_classes_with_theme_properties()
+	set_code_completion_prefixes(options)
+	_add_code_completion_options(
+		options,
+		CodeEdit.KIND_CLASS,
+		GSSSyntaxHighlighter.THEME_TYPE_PROPERTY_COLOR,
+		CodeEdit.CodeCompletionLocation.LOCATION_OTHER
+	)
+
+func _add_theme_style_code_completion_options() -> void:
+	var style_options = GSS.get_theme_properties(_current_style)
+	var stylebox_options = GSS.get_stylebox_properties(GSS.DEFAULT_STYLEBOX)
+	set_code_completion_prefixes(style_options + stylebox_options)
+	_add_code_completion_options(
+		style_options,
+		CodeEdit.KIND_MEMBER,
+		GSSSyntaxHighlighter.STYLE_PROPERTY_COLOR,
+		CodeEdit.CodeCompletionLocation.LOCATION_LOCAL
+	)
+	_add_code_completion_options(
+		stylebox_options,
+		CodeEdit.KIND_MEMBER,
+		GSSSyntaxHighlighter.STYLEBOX_PROPERTY_COLOR,
+		CodeEdit.CodeCompletionLocation.LOCATION_OTHER
+	)
 
 
 func _on_resources_reimported(resources: PackedStringArray) -> void:
@@ -64,16 +107,17 @@ func _on_resources_reimported(resources: PackedStringArray) -> void:
 func _on_text_changed() -> void:
 	_update_current_state()
 	
+	# Add code completion for property names.
 	var is_before_colon: bool = _current_line.find(":") == -1
-	
 	if is_before_colon:
 		# Find the proper code completion options for the current indentation level.
 		match _current_indent:
-			0: _update_theme_type_code_completion_options()
-			1: _update_theme_style_code_completion_options()
-			2: _update_stylebox_code_completion_options()
+			0: _add_theme_type_code_completion_options()
+			1: _add_theme_style_code_completion_options()
+			2: _add_stylebox_code_completion_options()
 		
 		update_code_completion_options(true)
+		return
 
 
 func _update_current_state() -> void:
@@ -116,42 +160,3 @@ func _update_current_state() -> void:
 	
 	if !_current_stylebox:
 		_current_stylebox = GSS.DEFAULT_STYLEBOX
-
-
-func _update_stylebox_code_completion_options() -> void:
-	var options = GSS.get_stylebox_properties(GSS.DEFAULT_STYLEBOX)
-	_add_code_completion_options(
-		options,
-		CodeEdit.KIND_MEMBER,
-		GSSSyntaxHighlighter.STYLEBOX_PROPERTY_COLOR,
-		CodeEdit.CodeCompletionLocation.LOCATION_OTHER
-	)
-
-func _update_theme_type_code_completion_options() -> void:
-	var options = GSS.get_classes_with_theme_properties()
-	_add_code_completion_options(
-		options,
-		CodeEdit.KIND_CLASS,
-		GSSSyntaxHighlighter.THEME_TYPE_PROPERTY_COLOR,
-		CodeEdit.CodeCompletionLocation.LOCATION_OTHER
-	)
-
-func _update_theme_style_code_completion_options() -> void:
-	var style_options = GSS.get_theme_properties(_current_style)
-	var stylebox_options = GSS.get_stylebox_properties(GSS.DEFAULT_STYLEBOX)
-	
-	set_code_completion_prefixes(style_options + stylebox_options)
-	
-	_add_code_completion_options(
-		style_options,
-		CodeEdit.KIND_MEMBER,
-		GSSSyntaxHighlighter.STYLE_PROPERTY_COLOR,
-		CodeEdit.CodeCompletionLocation.LOCATION_LOCAL
-	)
-	
-	_add_code_completion_options(
-		stylebox_options,
-		CodeEdit.KIND_MEMBER,
-		GSSSyntaxHighlighter.STYLEBOX_PROPERTY_COLOR,
-		CodeEdit.CodeCompletionLocation.LOCATION_OTHER
-	)

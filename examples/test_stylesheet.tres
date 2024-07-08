@@ -1,14 +1,14 @@
-[gd_resource type="Theme" load_steps=6 format=3 uid="uid://dl31pisj8yulq"]
+[gd_resource type="Theme" load_steps=6 format=3 uid="uid://76mepgnjm4ce"]
 
-[ext_resource type="FontFile" uid="uid://crfeeuddpgih3" path="res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf" id="1_touhl"]
+[ext_resource type="FontFile" uid="uid://crfeeuddpgih3" path="res://examples/assets/fonts/roboto_mono/static/RobotoMono-Regular.ttf" id="1_oqdj5"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4r6p2"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7y1u6"]
 bg_color = Color(1, 0.133333, 0.8, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u7e1r"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0qwpt"]
 bg_color = Color(1, 0, 0, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xfqt0"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_re562"]
 bg_color = Color(0, 0, 0, 0.4)
 corner_radius_top_left = 20
 corner_radius_top_right = 20
@@ -19,13 +19,13 @@ expand_margin_top = 20.0
 expand_margin_right = 20.0
 expand_margin_bottom = 20.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aiac7"]
-bg_color = Color(0, 0, 1, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nj0wp"]
+bg_color = Color(1, 1, 0, 1)
 
 [resource]
 Button/font_sizes/font_size = 20
-Button/fonts/font = ExtResource("1_touhl")
-Button/styles/disabled = SubResource("StyleBoxFlat_4r6p2")
-Button/styles/hover = SubResource("StyleBoxFlat_u7e1r")
-Button/styles/normal = SubResource("StyleBoxFlat_xfqt0")
-Button/styles/pressed = SubResource("StyleBoxFlat_aiac7")
+Button/fonts/font = ExtResource("1_oqdj5")
+Button/styles/disabled = SubResource("StyleBoxFlat_7y1u6")
+Button/styles/hover = SubResource("StyleBoxFlat_0qwpt")
+Button/styles/normal = SubResource("StyleBoxFlat_re562")
+Button/styles/pressed = SubResource("StyleBoxFlat_nj0wp")
